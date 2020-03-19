@@ -120,6 +120,10 @@ import java.util.function.Function;
  * <a href="{@docRoot}/../technotes/guides/collections/index.html">
  * Java Collections Framework</a>.
  *
+ * - 在Java8 中，HashMap的实现采用了（数组 + 链表 + 红黑树）的复杂结构，数组的一个元素又称作桶。
+ * - 当一个链表的元素个数达到一定的数量（且数组的长度达到一定的长度）后，则把链表转化为红黑树，从而提高效率。
+ * - 数组的查询效率为O(1)，链表的查询效率是O(k)，红黑树的查询效率是O(log k)，k为桶中的元素个数，所以当元素数量非常多的时候，转化为红黑树能极大地提高效率。
+ *
  * @param <K> the type of keys maintained by this map
  * @param <V> the type of mapped values
  *
@@ -230,11 +234,13 @@ public class HashMap<K,V> extends AbstractMap<K,V>
      */
 
     /**
+     * 默认的初始容量为 16
      * The default initial capacity - MUST be a power of two.
      */
     static final int DEFAULT_INITIAL_CAPACITY = 1 << 4; // aka 16
 
     /**
+     * 最大的容量为2的30次方
      * The maximum capacity, used if a higher value is implicitly specified
      * by either of the constructors with arguments.
      * MUST be a power of two <= 1<<30.
@@ -242,11 +248,13 @@ public class HashMap<K,V> extends AbstractMap<K,V>
     static final int MAXIMUM_CAPACITY = 1 << 30;
 
     /**
+     * 默认的装载因子
      * The load factor used when none specified in constructor.
      */
     static final float DEFAULT_LOAD_FACTOR = 0.75f;
 
     /**
+     * 当一个桶中的元素个数大于等于8时进行树化
      * The bin count threshold for using a tree rather than list for a
      * bin.  Bins are converted to trees when adding an element to a
      * bin with at least this many nodes. The value must be greater
@@ -257,6 +265,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
     static final int TREEIFY_THRESHOLD = 8;
 
     /**
+     * 当一个桶中的元素个数小于等于6时把树转化为链表
      * The bin count threshold for untreeifying a (split) bin during a
      * resize operation. Should be less than TREEIFY_THRESHOLD, and at
      * most 6 to mesh with shrinkage detection under removal.
@@ -264,6 +273,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
     static final int UNTREEIFY_THRESHOLD = 6;
 
     /**
+     * 当桶的个数达到64的时候才进行树化, 也就是数组的长度达到 64 才能树化
      * The smallest table capacity for which bins may be treeified.
      * (Otherwise the table is resized if too many nodes in a bin.)
      * Should be at least 4 * TREEIFY_THRESHOLD to avoid conflicts
@@ -272,13 +282,26 @@ public class HashMap<K,V> extends AbstractMap<K,V>
     static final int MIN_TREEIFY_CAPACITY = 64;
 
     /**
+     * Map.Entry 的实现, 单向链表结构
      * Basic hash bin node, used for most entries.  (See below for
      * TreeNode subclass, and in LinkedHashMap for its Entry subclass.)
      */
     static class Node<K,V> implements Map.Entry<K,V> {
+        /**
+         * 缓存节点的 hash 值
+         */
         final int hash;
+        /**
+         * 节点的 key
+         */
         final K key;
+        /**
+         * 节点的值
+         */
         V value;
+        /**
+         * 单向链表下一个节点
+         */
         Node<K,V> next;
 
         Node(int hash, K key, V value, Node<K,V> next) {
@@ -296,6 +319,9 @@ public class HashMap<K,V> extends AbstractMap<K,V>
             return Objects.hashCode(key) ^ Objects.hashCode(value);
         }
 
+        /**
+         * 设置新值, 并返回旧值
+         */
         public final V setValue(V newValue) {
             V oldValue = value;
             value = newValue;
@@ -372,6 +398,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
     }
 
     /**
+     * 获取给定数字 cap 的最小 2 的 n 次方的值, 这个算法优化不错, 值得学习
      * Returns a power of two size for the given target capacity.
      */
     static final int tableSizeFor(int cap) {
@@ -387,6 +414,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
     /* ---------------- Fields -------------- */
 
     /**
+     * 节点数组, 数组的长度，亦即桶的个数，默认为16，最大为2的30次方，当容量达到64时才可以树化。
      * The table, initialized on first use, and resized as
      * necessary. When allocated, length is always a power of two.
      * (We also tolerate length zero in some operations to allow
@@ -395,17 +423,20 @@ public class HashMap<K,V> extends AbstractMap<K,V>
     transient Node<K,V>[] table;
 
     /**
+     * 作为 entrySet() 的缓存
      * Holds cached entrySet(). Note that AbstractMap fields are used
      * for keySet() and values().
      */
     transient Set<Map.Entry<K,V>> entrySet;
 
     /**
+     * 已经存储 k-v 的数量
      * The number of key-value mappings contained in this map.
      */
     transient int size;
 
     /**
+     * 修改次数，用于在迭代的时候执行快速失败策略
      * The number of times this HashMap has been structurally modified
      * Structural modifications are those that change the number of mappings in
      * the HashMap or otherwise modify its internal structure (e.g.,
@@ -415,6 +446,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
     transient int modCount;
 
     /**
+     * 当桶的使用数量达到多少时进行扩容，threshold = capacity * loadFactor
      * The next size value at which to resize (capacity * load factor).
      *
      * @serial
@@ -426,6 +458,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
     int threshold;
 
     /**
+     * 装载因子
      * The load factor for the hash table.
      *
      * @serial
@@ -435,6 +468,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
     /* ---------------- Public operations -------------- */
 
     /**
+     * 指定初始化容量和加载因子创建
      * Constructs an empty <tt>HashMap</tt> with the specified initial
      * capacity and load factor.
      *
@@ -444,15 +478,21 @@ public class HashMap<K,V> extends AbstractMap<K,V>
      *         or the load factor is nonpositive
      */
     public HashMap(int initialCapacity, float loadFactor) {
+        //校验容量
         if (initialCapacity < 0)
             throw new IllegalArgumentException("Illegal initial capacity: " +
                                                initialCapacity);
+        //容量超过最大值, 则直接用 MAXIMUM_CAPACITY
         if (initialCapacity > MAXIMUM_CAPACITY)
             initialCapacity = MAXIMUM_CAPACITY;
+        //加载因子不能小于等于 0, 且
         if (loadFactor <= 0 || Float.isNaN(loadFactor))
             throw new IllegalArgumentException("Illegal load factor: " +
                                                loadFactor);
+        //赋值
         this.loadFactor = loadFactor;
+        //计算扩容门槛, 也就是计算当前 initialCapacity 的最小 2 的 n 次方, 当传入数字是 5 , 则返回8, 当是 10 时, 则返回 16
+        //这里没有直接存 initialCapacity 的, 而是用 threshold 先存起来
         this.threshold = tableSizeFor(initialCapacity);
     }
 
@@ -1784,15 +1824,31 @@ public class HashMap<K,V> extends AbstractMap<K,V>
     // Tree bins
 
     /**
+     * 红黑树的树节点
      * Entry for Tree bins. Extends LinkedHashMap.Entry (which in turn
      * extends Node) so can be used as extension of either regular or
      * linked node.
      */
     static final class TreeNode<K,V> extends LinkedHashMap.Entry<K,V> {
+        /**
+         * 父节点
+         */
         TreeNode<K,V> parent;  // red-black tree links
+        /**
+         * 左子节点
+         */
         TreeNode<K,V> left;
+        /**
+         * 右子节点
+         */
         TreeNode<K,V> right;
+        /**
+         * 前一个节点(双向链表)
+         */
         TreeNode<K,V> prev;    // needed to unlink next upon deletion
+        /**
+         * 是否是红色
+         */
         boolean red;
         TreeNode(int hash, K key, V val, Node<K,V> next) {
             super(hash, key, val, next);
