@@ -2208,12 +2208,15 @@ public class HashMap<K,V> extends AbstractMap<K,V>
         }
 
         /**
+         * 反树化
          * Returns a list of non-TreeNodes replacing those linked from
          * this node.
          */
         final Node<K,V> untreeify(HashMap<K,V> map) {
             Node<K,V> hd = null, tl = null;
+            //遍历树
             for (Node<K,V> q = this; q != null; q = q.next) {
+                //创建 Node
                 Node<K,V> p = map.replacementNode(q, null);
                 if (tl == null)
                     hd = p;
@@ -2221,6 +2224,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
                     tl.next = p;
                 tl = p;
             }
+            //返回树的 head 节点
             return hd;
         }
 
@@ -2503,6 +2507,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
         }
 
         /**
+         * 将树分割成两颗
          * Splits nodes in a tree bin into lower and upper tree bins,
          * or untreeifies if now too small. Called only from resize;
          * see above discussion about split bits and indices.
@@ -2518,9 +2523,12 @@ public class HashMap<K,V> extends AbstractMap<K,V>
             TreeNode<K,V> loHead = null, loTail = null;
             TreeNode<K,V> hiHead = null, hiTail = null;
             int lc = 0, hc = 0;
+            //遍历 TreeNode
             for (TreeNode<K,V> e = b, next; e != null; e = next) {
+                //获取下一个节点
                 next = (TreeNode<K,V>)e.next;
                 e.next = null;
+                //低位链表
                 if ((e.hash & bit) == 0) {
                     if ((e.prev = loTail) == null)
                         loHead = e;
@@ -2529,6 +2537,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
                     loTail = e;
                     ++lc;
                 }
+                //高位链表
                 else {
                     if ((e.prev = hiTail) == null)
                         hiHead = e;
@@ -2539,7 +2548,9 @@ public class HashMap<K,V> extends AbstractMap<K,V>
                 }
             }
 
+            //处理低位链表
             if (loHead != null) {
+                //长度不够则去树化
                 if (lc <= UNTREEIFY_THRESHOLD)
                     tab[index] = loHead.untreeify(map);
                 else {
@@ -2548,7 +2559,9 @@ public class HashMap<K,V> extends AbstractMap<K,V>
                         loHead.treeify(tab);
                 }
             }
+            //处理高位链表
             if (hiHead != null) {
+                //长度不够则去树化
                 if (hc <= UNTREEIFY_THRESHOLD)
                     tab[index + bit] = hiHead.untreeify(map);
                 else {
