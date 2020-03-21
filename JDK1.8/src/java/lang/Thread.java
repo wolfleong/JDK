@@ -2025,6 +2025,7 @@ class Thread implements Runnable {
     @sun.misc.Contended("tlr")
     long threadLocalRandomSeed;
 
+    //这个变量的值就是LongAdder用来hash定位Cells数组位置的，平时线程的这个变量一般用不到，它的值一直都是0
     /** Probe hash value; nonzero if threadLocalRandomSeed initialized */
     @sun.misc.Contended("tlr")
     int threadLocalRandomProbe;

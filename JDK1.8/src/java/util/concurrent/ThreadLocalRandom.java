@@ -155,6 +155,7 @@ public class ThreadLocalRandom extends Random {
     private static final long GAMMA = 0x9e3779b97f4a7c15L;
 
     /**
+     * 黄金比例增长, 如 ThreadLocalMap 也有
      * The increment for generating probe values
      */
     private static final int PROBE_INCREMENT = 0x9e3779b9;
@@ -205,11 +206,14 @@ public class ThreadLocalRandom extends Random {
      * rely on (static) atomic generators to initialize the values.
      */
     static final void localInit() {
+        //probeGenerator 累加一次 PROBE_INCREMENT 这个值
         int p = probeGenerator.addAndGet(PROBE_INCREMENT);
+        //如果 probeGenerator 为 0，这取 1, 跳过 0
         int probe = (p == 0) ? 1 : p; // skip 0
         long seed = mix64(seeder.getAndAdd(SEEDER_INCREMENT));
         Thread t = Thread.currentThread();
         UNSAFE.putLong(t, SEED, seed);
+        //设置到线程变量中
         UNSAFE.putInt(t, PROBE, probe);
     }
 
@@ -219,6 +223,7 @@ public class ThreadLocalRandom extends Random {
      * @return the current thread's {@code ThreadLocalRandom}
      */
     public static ThreadLocalRandom current() {
+        //如果变量 threadLocalRandomProbe 是默认的 0 , 则进行初始化
         if (UNSAFE.getInt(Thread.currentThread(), PROBE) == 0)
             localInit();
         return instance;
