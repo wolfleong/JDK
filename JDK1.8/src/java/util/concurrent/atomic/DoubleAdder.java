@@ -81,6 +81,7 @@ public class DoubleAdder extends Striped64 implements Serializable {
     }
 
     /**
+     * 与LongAdder的唯一区别就是，其内部会通过一些方法，将原始的double类型，转换为long类型，其余和LongAdder完全一样：
      * Adds the given value.
      *
      * @param x the value to add
