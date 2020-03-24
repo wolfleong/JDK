@@ -1511,6 +1511,7 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
     }
 
     /**
+     * 这些类是为了反序列化, 兼容 1.7 的 ConcurrentHashMap 的结构
      * Stripped-down version of helper class used in previous version,
      * declared for the sake of serialization compatibility
      */
@@ -1788,42 +1789,62 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
      *         in which case the mapping is left unestablished
      */
     public V computeIfAbsent(K key, Function<? super K, ? extends V> mappingFunction) {
+        //判断参数不为 null
         if (key == null || mappingFunction == null)
             throw new NullPointerException();
+        //计算 key 的 hashcode
         int h = spread(key.hashCode());
         V val = null;
         int binCount = 0;
+        //自旋
         for (Node<K,V>[] tab = table;;) {
             Node<K,V> f; int n, i, fh;
+            //如果没初始化, 则初始化处理
             if (tab == null || (n = tab.length) == 0)
                 tab = initTable();
+            //如果 hash 槽没有节点
             else if ((f = tabAt(tab, i = (n - 1) & h)) == null) {
+                //创建 ReservationNode
                 Node<K,V> r = new ReservationNode<K,V>();
+                //同步
                 synchronized (r) {
+                    //添加到数组
                     if (casTabAt(tab, i, null, r)) {
+                        //计数
                         binCount = 1;
                         Node<K,V> node = null;
                         try {
+                            //计算 key 的值, 如果不为 null, 则创建链表节点
                             if ((val = mappingFunction.apply(key)) != null)
                                 node = new Node<K,V>(h, key, val, null);
                         } finally {
+                            //设置到数组
                             setTabAt(tab, i, node);
                         }
                     }
                 }
+                //如果没有添加, 则直接退出
                 if (binCount != 0)
                     break;
             }
+            //在扩容, 则帮助
             else if ((fh = f.hash) == MOVED)
                 tab = helpTransfer(tab, f);
+            // hash 冲突
             else {
+                //标记是否添加
                 boolean added = false;
+                //锁首节点
                 synchronized (f) {
+                    //再次校验是否一致
                     if (tabAt(tab, i) == f) {
+                        //如果是链表节点
                         if (fh >= 0) {
                             binCount = 1;
+                            //遍历
                             for (Node<K,V> e = f;; ++binCount) {
                                 K ek; V ev;
+                                //找到 key 相等的, 记录旧值, 退出循环
                                 if (e.hash == h &&
                                     ((ek = e.key) == key ||
                                      (ek != null && key.equals(ek)))) {
@@ -1831,22 +1852,30 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
                                     break;
                                 }
                                 Node<K,V> pred = e;
+                                //遍历到最后没有
                                 if ((e = e.next) == null) {
+                                    //计算 key 的值
                                     if ((val = mappingFunction.apply(key)) != null) {
+                                        //设置有添加
                                         added = true;
+                                        //创建节点
                                         pred.next = new Node<K,V>(h, key, val, null);
                                     }
                                     break;
                                 }
                             }
                         }
+                        //如果是树结构
                         else if (f instanceof TreeBin) {
                             binCount = 2;
+                            //强转
                             TreeBin<K,V> t = (TreeBin<K,V>)f;
                             TreeNode<K,V> r, p;
+                            //根节点查找, 如果找到则记录值
                             if ((r = t.root) != null &&
                                 (p = r.findTreeNode(h, key, null)) != null)
                                 val = p.val;
+                            //没找到则添加
                             else if ((val = mappingFunction.apply(key)) != null) {
                                 added = true;
                                 t.putTreeVal(h, key, val);
@@ -1854,15 +1883,19 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
                         }
                     }
                 }
+                //链表长度不为 0
                 if (binCount != 0) {
+                    //判断是否树化
                     if (binCount >= TREEIFY_THRESHOLD)
                         treeifyBin(tab, i);
+                    //没有添加直接返回旧值
                     if (!added)
                         return val;
                     break;
                 }
             }
         }
+        //有添加, 判断是否扩容处理
         if (val != null)
             addCount(1L, binCount);
         return val;
@@ -2355,6 +2388,7 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
     }
 
     /**
+     * ReservationNode：占位节点，不存储任何信息，无实际用处，仅用于computeIfAbsent和compute方法中。
      * A place-holder node used in computeIfAbsent and compute
      */
     static final class ReservationNode<K,V> extends Node<K,V> {
@@ -3728,6 +3762,9 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
     }
 
     /**
+     * Traverser类主要用于遍历操作，其子类有BaseIterator、KeySpliterator、ValueSpliterator、EntrySpliterator四个类，
+     * BaseIterator用于遍历操作。KeySplitertor、ValueSpliterator、EntrySpliterator则用于键、值、键值对的划分。
+     *
      * Encapsulates traversal for methods such as containsValue; also
      * serves as a base class for other iterators and spliterators.
      *
