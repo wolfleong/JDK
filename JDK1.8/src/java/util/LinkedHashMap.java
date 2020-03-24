@@ -148,6 +148,14 @@ import java.io.IOException;
  * returned by all of this class's collection view methods are created from
  * the iterators of the corresponding collections.
  *
+ *  - LinkedHashMap继承自HashMap，具有HashMap的所有特性
+ *  - LinkedHashMap内部维护了一个双向链表，能保证元素按插入的顺序访问，也能以访问顺序访问，可以用来实现LRU缓存策略。
+ *  - LinkedHashMap可以看成是 LinkedList + HashMap。
+ *  - LinkedHashMap的实现非常精妙，很多方法都是在HashMap中留的钩子（Hook），直接实现这些Hook就可以实现对应的功能了，并不需要再重写put()等方法；
+ *  - 默认的LinkedHashMap并不会移除旧元素，如果需要移除旧元素，则需要重写removeEldestEntry()方法设定移除策略；
+ *
+ *  LRU（Least recently used，最近最少使用）算法根据数据的历史访问记录来进行淘汰数据，其核心思想是“如果数据最近被访问过，那么将来被访问的几率也更高”。
+ *
  * @param <K> the type of keys maintained by this map
  * @param <V> the type of mapped values
  *
@@ -160,8 +168,6 @@ import java.io.IOException;
  * @see     Hashtable
  * @since   1.4
  */
-//LinkedHashMap内部维护了一个双向链表，能保证元素按插入的顺序访问，也能以访问顺序访问，可以用来实现LRU缓存策略。
-//LinkedHashMap可以看成是 LinkedList + HashMap。
 public class LinkedHashMap<K,V>
     extends HashMap<K,V>
     implements Map<K,V>
@@ -193,6 +199,7 @@ public class LinkedHashMap<K,V>
      * HashMap.Node subclass for normal LinkedHashMap entries.
      */
     static class Entry<K,V> extends HashMap.Node<K,V> {
+        // before 和 after 主要维护 LinkedHashMap 访问顺序的关系
         Entry<K,V> before, after;
         Entry(int hash, K key, V value, Node<K,V> next) {
             super(hash, key, value, next);
@@ -214,7 +221,8 @@ public class LinkedHashMap<K,V>
     transient LinkedHashMap.Entry<K,V> tail;
 
     /**
-     * 是否需要按访问顺序排序，如果为false则按插入顺序存储元素，如果是true则按访问顺序存储元素。
+     * 是否需要按访问顺序排序，如果为 false 则按插入顺序存储元素，如果是 true 则按访问顺序存储元素。
+     * - 什么叫按访问顺序呢, 对节点的访问 get() 会将节点放到放到双向链表的尾部, 然后遍历的时候从 head 开始, 也就是最老的节点
      * The iteration ordering method for this linked hash map: <tt>true</tt>
      * for access-order, <tt>false</tt> for insertion-order.
      *
@@ -224,6 +232,9 @@ public class LinkedHashMap<K,V>
 
     // internal utilities
 
+    /**
+     * 添加 p 到双向链表尾部
+     */
     // link at the end of list
     private void linkNodeLast(LinkedHashMap.Entry<K,V> p) {
         LinkedHashMap.Entry<K,V> last = tail;
@@ -236,6 +247,9 @@ public class LinkedHashMap<K,V>
         }
     }
 
+    /**
+     * 调换两个节点
+     */
     // apply src's links to dst
     private void transferLinks(LinkedHashMap.Entry<K,V> src,
                                LinkedHashMap.Entry<K,V> dst) {
@@ -258,6 +272,9 @@ public class LinkedHashMap<K,V>
         head = tail = null;
     }
 
+    /**
+     * HashMap 创建节点时会调用
+     */
     Node<K,V> newNode(int hash, K key, V value, Node<K,V> e) {
         LinkedHashMap.Entry<K,V> p =
             new LinkedHashMap.Entry<K,V>(hash, key, value, e);
@@ -286,6 +303,10 @@ public class LinkedHashMap<K,V>
         return t;
     }
 
+    /**
+     * HashMap 中 在节点被删除之后调用的方法。
+     * - 这个方法的逻辑是: 把节点p从双向链表中删除。
+     */
     void afterNodeRemoval(Node<K,V> e) { // unlink
         LinkedHashMap.Entry<K,V> p =
             (LinkedHashMap.Entry<K,V>)e, b = p.before, a = p.after;
@@ -323,12 +344,28 @@ public class LinkedHashMap<K,V>
         }
     }
 
+    /**
+     * 在节点访问之后被调用，主要在put()已经存在的元素或get()时被调用，如果 accessOrder 为true，调用这个方法把访问到的节点移动到双向链表的末尾。
+     *
+     * （1）如果accessOrder为true，并且访问的节点不是尾节点；
+     *
+     * （2）从双向链表中移除访问的节点；
+     *
+     * （3）把访问的节点加到双向链表的末尾；（末尾为最新访问的元素）
+     *
+     */
     void afterNodeAccess(Node<K,V> e) { // move node to last
         LinkedHashMap.Entry<K,V> last;
+        // 如果accessOrder为true，并且访问的节点不是尾节点
         if (accessOrder && (last = tail) != e) {
+            //b 表示前一个节点, 即 before
+            //a 表示后一个节点, 即 after
             LinkedHashMap.Entry<K,V> p =
                 (LinkedHashMap.Entry<K,V>)e, b = p.before, a = p.after;
+            // p 即将成为尾节点, 所以它自己就是 after, 它没有after
             p.after = null;
+
+            // 把p节点从双向链表中移除
             if (b == null)
                 head = a;
             else
@@ -337,6 +374,8 @@ public class LinkedHashMap<K,V>
                 a.before = b;
             else
                 last = b;
+
+            // 把p节点放到双向链表的末尾
             if (last == null)
                 head = p;
             else {
@@ -460,8 +499,10 @@ public class LinkedHashMap<K,V>
      */
     public V get(Object key) {
         Node<K,V> e;
+        //没找到则返回 null
         if ((e = getNode(hash(key), key)) == null)
             return null;
+        //如果查找到了元素，且accessOrder为true，则调用afterNodeAccess()方法把访问的节点移到双向链表的末尾。
         if (accessOrder)
             afterNodeAccess(e);
         return e.value;
