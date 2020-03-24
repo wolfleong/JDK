@@ -125,6 +125,13 @@ import java.util.function.Consumer;
  * <a href="{@docRoot}/../technotes/guides/collections/index.html">
  * Java Collections Framework</a>.
  *
+ * - IdentityHashMap利用Hash表来实现Map接口，比较键（和值）时使用引用相等性代替对象相等性，也就是说使用 == 而不是使用 equals。
+ * - IdentityHashMap不是Map的通用实现，它有意违反了Map的常规协定。并且IdentityHashMap允许key和value都为null。
+ * - IdentityHashMap将所有的key和value都存储到Object[]数组table中，并且key和value相邻存储，当出现哈希冲突时，会往下遍历数组，直到找到一个空闲的位置。
+ *   注意，数组第一个位置存储的是key，第二个位置存储的是value。因此奇数位置处存储的是key，偶数位置处存储的是value。
+ * - 采用线性探测的方式解决hash冲突, 跟 ThreadLocalMap 的处理差不多
+ * - IdentityHashMap的加载因子为2/3。
+ *
  * @see     System#identityHashCode(Object)
  * @see     Object#hashCode()
  * @see     Collection
@@ -140,6 +147,7 @@ public class IdentityHashMap<K,V>
     implements Map<K,V>, java.io.Serializable, Cloneable
 {
     /**
+     * //哈希表的默认容量
      * The initial capacity used by the no-args constructor.
      * MUST be a power of two.  The value 32 corresponds to the
      * (specified) expected maximum size of 21, given a load factor
@@ -148,6 +156,7 @@ public class IdentityHashMap<K,V>
     private static final int DEFAULT_CAPACITY = 32;
 
     /**
+     * //哈希表的最小容量
      * The minimum capacity, used if a lower value is implicitly specified
      * by either of the constructors with arguments.  The value 4 corresponds
      * to an expected maximum size of 2, given a load factor of 2/3.
@@ -156,6 +165,7 @@ public class IdentityHashMap<K,V>
     private static final int MINIMUM_CAPACITY = 4;
 
     /**
+     * //哈希表的最大容量，其中包括了一个键为null的键值对
      * The maximum capacity, used if a higher value is implicitly specified
      * by either of the constructors with arguments.
      * MUST be a power of two <= 1<<29.
@@ -167,11 +177,13 @@ public class IdentityHashMap<K,V>
     private static final int MAXIMUM_CAPACITY = 1 << 29;
 
     /**
+     * //哈希表内部存储的数组
      * The table, resized as necessary. Length MUST always be a power of two.
      */
     transient Object[] table; // non-private to simplify nested class access
 
     /**
+     * //哈希表存储的键值对数量
      * The number of key-value mappings contained in this identity hash map.
      *
      * @serial
@@ -179,11 +191,13 @@ public class IdentityHashMap<K,V>
     int size;
 
     /**
+     * //哈希表的修改次数
      * The number of modifications, to support fast-fail iterators
      */
     transient int modCount;
 
     /**
+     * //存储键为null的key，如果键为null，实际用NULL_KEY存储
      * Value representing null keys inside tables.
      */
     static final Object NULL_KEY = new Object();
@@ -207,10 +221,12 @@ public class IdentityHashMap<K,V>
      * maximum size (21).
      */
     public IdentityHashMap() {
+        //默认构造函数，容量为32，加载因子为2/3，最多可存储32*2/3=21个键值对
         init(DEFAULT_CAPACITY);
     }
 
     /**
+     * //根据指定容量构造
      * Constructs a new, empty map with the specified expected maximum size.
      * Putting more than the expected number of key-value mappings into
      * the map may cause the internal data structure to grow, which may be
@@ -227,6 +243,8 @@ public class IdentityHashMap<K,V>
     }
 
     /**
+     * //返回一个介于 MINIMUM_CAPACITY 和 MAXIMUM_CAPACITY，且大于 3*expectedMaxSize/2 的值
+     * // 如果该值不存在，返回 MAXIMUM_CAPACITY
      * Returns the appropriate capacity for the given expected maximum size.
      * Returns the smallest power of two between MINIMUM_CAPACITY and
      * MAXIMUM_CAPACITY, inclusive, that is greater than (3 *
@@ -242,6 +260,8 @@ public class IdentityHashMap<K,V>
     }
 
     /**
+     * //初始化内部存储数组table，table数组大小为参数initCapacity的两倍
+     * //为何是两倍？因为这是包括了键和值，刚好两倍
      * Initializes object to be an empty map with the specified initial
      * capacity, which is assumed to be a power of two between
      * MINIMUM_CAPACITY and MAXIMUM_CAPACITY inclusive.
@@ -255,6 +275,7 @@ public class IdentityHashMap<K,V>
     }
 
     /**
+     * 通过指定map初始化
      * Constructs a new identity hash map containing the keys-value mappings
      * in the specified map.
      *
@@ -288,15 +309,21 @@ public class IdentityHashMap<K,V>
     }
 
     /**
+     * //返回对象x在数组table中的位置
      * Returns index for Object x.
      */
     private static int hash(Object x, int length) {
+        // 此方法不管你是否重写了 hashCode 方法都会返回对象默认的哈希值
+        // 即使重写了 hashCode 也不会调用重写的 hashCode 方法
         int h = System.identityHashCode(x);
         // Multiply by -127, and left-shift to use least bit as part of hash
+        //分析一下 ((h << 1) - (h << 8)) & (length - 1) 的运算，首先哈希值左移一位，保证是一个偶数，减去一个左移八位的值也是一个偶数，
+        // 然后与上全 1 的二进制，计算出的还是一个偶数，这样就能保证每个 key 计算出的索引一定是个偶数，然后 value 放在索引值下一个位置上就可以了
         return ((h << 1) - (h << 8)) & (length - 1);
     }
 
     /**
+     * 取下一个 key 的索引, 超出则从 0 开始
      * Circularly traverses table of size len.
      */
     private static int nextKeyIndex(int i, int len) {
@@ -322,16 +349,22 @@ public class IdentityHashMap<K,V>
      */
     @SuppressWarnings("unchecked")
     public V get(Object key) {
+        //如果key为null，取null键对应的key
+
         Object k = maskNull(key);
         Object[] tab = table;
         int len = tab.length;
+        //取键k在table的索引
         int i = hash(k, len);
         while (true) {
             Object item = tab[i];
+            //如果索引i处存储的值就是键k，那么下一个存储位置就是键对应的值
             if (item == k)
                 return (V) tab[i + 1];
+            //如果索引i处存储的值为null，返回null
             if (item == null)
                 return null;
+            //轮询遍历下一个键
             i = nextKeyIndex(i, len);
         }
     }
@@ -417,15 +450,20 @@ public class IdentityHashMap<K,V>
      * @see     #containsKey(Object)
      */
     public V put(K key, V value) {
+        // 如果 key 为 null 那么用一个内部的 Object 对象来代替 null
         final Object k = maskNull(key);
 
         retryAfterResize: for (;;) {
+            // 获取哈希表与哈希表大小
             final Object[] tab = table;
             final int len = tab.length;
+            // 计算哈希值，len 用于计算在数组中的索引
             int i = hash(k, len);
 
+            // 这里分为两种情况，哈希冲突与非冲突，当冲突时会线性探测寻找下一个可用的位置
             for (Object item; (item = tab[i]) != null;
                  i = nextKeyIndex(i, len)) {
+                // key 引用相同，值覆盖，返回老得值
                 if (item == k) {
                     @SuppressWarnings("unchecked")
                         V oldValue = (V) tab[i + 1];
@@ -434,12 +472,15 @@ public class IdentityHashMap<K,V>
                 }
             }
 
+            //键值对数量加1
             final int s = size + 1;
             // Use optimized form of 3 * s.
             // Next capacity is len, 2 * current capacity.
+            //如果3*s大于数组的大小，需要重新分配table
             if (s + (s << 1) > len && resize(len))
                 continue retryAfterResize;
 
+            //修改次数+1
             modCount++;
             tab[i] = k;
             tab[i + 1] = value;
@@ -455,6 +496,7 @@ public class IdentityHashMap<K,V>
      * @return whether a resize did in fact take place
      */
     private boolean resize(int newCapacity) {
+        //新数组的大小为参数的两倍
         // assert (newCapacity & -newCapacity) == newCapacity; // power of 2
         int newLength = newCapacity * 2;
 
@@ -470,15 +512,19 @@ public class IdentityHashMap<K,V>
 
         Object[] newTable = new Object[newLength];
 
+        //将老数组的元素复制到新的数组
         for (int j = 0; j < oldLength; j += 2) {
             Object key = oldTable[j];
             if (key != null) {
                 Object value = oldTable[j+1];
                 oldTable[j] = null;
                 oldTable[j+1] = null;
+                //找到key在新数组的索引
                 int i = hash(key, newLength);
+                //找到不为空的索引位置
                 while (newTable[i] != null)
                     i = nextKeyIndex(i, newLength);
+                //存储到新数组的位置
                 newTable[i] = key;
                 newTable[i + 1] = value;
             }
@@ -533,8 +579,10 @@ public class IdentityHashMap<K,V>
                 closeDeletion(i);
                 return oldValue;
             }
+            //遇到 null, 就是没找到, 直接返回 null
             if (item == null)
                 return null;
+            //探测一下
             i = nextKeyIndex(i, len);
         }
     }
@@ -588,6 +636,7 @@ public class IdentityHashMap<K,V>
         // and continuing until a null slot is seen, indicating
         // the end of a run of possibly-colliding keys.
         Object item;
+        //从 d 索引开始算下一个 kv, 直到遇到 null 为止
         for (int i = nextKeyIndex(d, len); (item = tab[i]) != null;
              i = nextKeyIndex(i, len) ) {
             // The following test triggers if the item at slot i (which
