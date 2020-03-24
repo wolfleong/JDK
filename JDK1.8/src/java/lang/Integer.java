@@ -1372,6 +1372,11 @@ public final class Integer extends Number implements Comparable<Integer> {
     }
 
     /**
+     * 该方法的作用是返回无符号整型i的最高非零位前面的0的个数，包括符号位在内；
+     * 如果i为负数，这个方法将会返回0，符号位为1.
+     * 比如说，10的二进制表示为 0000 0000 0000 0000 0000 0000 0000 1010
+     * java的整型长度为32位。那么这个方法返回的就是28
+     *
      * Returns the number of zero bits preceding the highest-order
      * ("leftmost") one-bit in the two's complement binary representation
      * of the specified {@code int} value.  Returns 32 if the
@@ -1393,6 +1398,7 @@ public final class Integer extends Number implements Comparable<Integer> {
      * @since 1.5
      */
     public static int numberOfLeadingZeros(int i) {
+        //如果是 0 , 则前面有 32 个 0
         // HD, Figure 5-6
         if (i == 0)
             return 32;
@@ -1401,6 +1407,7 @@ public final class Integer extends Number implements Comparable<Integer> {
         if (i >>> 24 == 0) { n +=  8; i <<=  8; }
         if (i >>> 28 == 0) { n +=  4; i <<=  4; }
         if (i >>> 30 == 0) { n +=  2; i <<=  2; }
+        // i >>> 31 判断第 32 位是否为 0, 如果是就符合一开始的 1
         n -= i >>> 31;
         return n;
     }
