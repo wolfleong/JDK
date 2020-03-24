@@ -86,6 +86,8 @@ package java.util;
  * <a href="{@docRoot}/../technotes/guides/collections/index.html">
  * Java Collections Framework</a>.
  *
+ * 该接口继承于SortedMap接口，因此该接口也是有序的键值对，但是它比SortedMap多增加一些导航的功能。
+ *
  * @author Doug Lea
  * @author Josh Bloch
  * @param <K> the type of keys maintained by this map
@@ -94,6 +96,7 @@ package java.util;
  */
 public interface NavigableMap<K,V> extends SortedMap<K,V> {
     /**
+     *  找到第一个比指定的key小的值
      * Returns a key-value mapping associated with the greatest key
      * strictly less than the given key, or {@code null} if there is
      * no such key.
@@ -109,6 +112,7 @@ public interface NavigableMap<K,V> extends SortedMap<K,V> {
     Map.Entry<K,V> lowerEntry(K key);
 
     /**
+     * 找到第一个比指定的key小的key
      * Returns the greatest key strictly less than the given key, or
      * {@code null} if there is no such key.
      *
@@ -123,6 +127,7 @@ public interface NavigableMap<K,V> extends SortedMap<K,V> {
     K lowerKey(K key);
 
     /**
+     * 找到第一个小于或等于指定key的值
      * Returns a key-value mapping associated with the greatest key
      * less than or equal to the given key, or {@code null} if there
      * is no such key.
@@ -138,6 +143,7 @@ public interface NavigableMap<K,V> extends SortedMap<K,V> {
     Map.Entry<K,V> floorEntry(K key);
 
     /**
+     * 找到第一个小于或等于指定key的key
      * Returns the greatest key less than or equal to the given key,
      * or {@code null} if there is no such key.
      *
@@ -152,6 +158,7 @@ public interface NavigableMap<K,V> extends SortedMap<K,V> {
     K floorKey(K key);
 
     /**
+     * 找到第一个大于或等于指定key的值
      * Returns a key-value mapping associated with the least key
      * greater than or equal to the given key, or {@code null} if
      * there is no such key.
@@ -167,6 +174,7 @@ public interface NavigableMap<K,V> extends SortedMap<K,V> {
     Map.Entry<K,V> ceilingEntry(K key);
 
     /**
+     * 找到第一个大于或等于指定key的 key
      * Returns the least key greater than or equal to the given key,
      * or {@code null} if there is no such key.
      *
@@ -181,6 +189,7 @@ public interface NavigableMap<K,V> extends SortedMap<K,V> {
     K ceilingKey(K key);
 
     /**
+     * 找到第一个大于指定key的值
      * Returns a key-value mapping associated with the least key
      * strictly greater than the given key, or {@code null} if there
      * is no such key.
@@ -196,6 +205,7 @@ public interface NavigableMap<K,V> extends SortedMap<K,V> {
     Map.Entry<K,V> higherEntry(K key);
 
     /**
+     * 找到第一个大于指定key的 key
      * Returns the least key strictly greater than the given key, or
      * {@code null} if there is no such key.
      *
@@ -210,6 +220,7 @@ public interface NavigableMap<K,V> extends SortedMap<K,V> {
     K higherKey(K key);
 
     /**
+     * // 获取最小值
      * Returns a key-value mapping associated with the least
      * key in this map, or {@code null} if the map is empty.
      *
@@ -219,6 +230,7 @@ public interface NavigableMap<K,V> extends SortedMap<K,V> {
     Map.Entry<K,V> firstEntry();
 
     /**
+     * 获取最大值
      * Returns a key-value mapping associated with the greatest
      * key in this map, or {@code null} if the map is empty.
      *
@@ -228,6 +240,7 @@ public interface NavigableMap<K,V> extends SortedMap<K,V> {
     Map.Entry<K,V> lastEntry();
 
     /**
+     * 删除最小的元素
      * Removes and returns a key-value mapping associated with
      * the least key in this map, or {@code null} if the map is empty.
      *
@@ -237,6 +250,7 @@ public interface NavigableMap<K,V> extends SortedMap<K,V> {
     Map.Entry<K,V> pollFirstEntry();
 
     /**
+     * 删除最大的元素
      * Removes and returns a key-value mapping associated with
      * the greatest key in this map, or {@code null} if the map is empty.
      *
@@ -246,6 +260,7 @@ public interface NavigableMap<K,V> extends SortedMap<K,V> {
     Map.Entry<K,V> pollLastEntry();
 
     /**
+     * 返回一个倒序的Map
      * Returns a reverse order view of the mappings contained in this map.
      * The descending map is backed by this map, so changes to the map are
      * reflected in the descending map, and vice-versa.  If either map is
@@ -263,6 +278,7 @@ public interface NavigableMap<K,V> extends SortedMap<K,V> {
     NavigableMap<K,V> descendingMap();
 
     /**
+     * 返回一个Navigable的key的集合，NavigableSet 和 NavigableMap类似
      * Returns a {@link NavigableSet} view of the keys contained in this map.
      * The set's iterator returns the keys in ascending order.
      * The set is backed by the map, so changes to the map are reflected in
@@ -279,6 +295,7 @@ public interface NavigableMap<K,V> extends SortedMap<K,V> {
     NavigableSet<K> navigableKeySet();
 
     /**
+     * 返回一个Navigable的key的集合倒序
      * Returns a reverse order {@link NavigableSet} view of the keys contained in this map.
      * The set's iterator returns the keys in descending order.
      * The set is backed by the map, so changes to the map are reflected in
@@ -295,6 +312,7 @@ public interface NavigableMap<K,V> extends SortedMap<K,V> {
     NavigableSet<K> descendingKeySet();
 
     /**
+     * 按key升序排列，返回子映射，fromKey 到 toKey
      * Returns a view of the portion of this map whose keys range from
      * {@code fromKey} to {@code toKey}.  If {@code fromKey} and
      * {@code toKey} are equal, the returned map is empty unless

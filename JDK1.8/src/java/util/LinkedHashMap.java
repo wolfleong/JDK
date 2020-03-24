@@ -156,6 +156,11 @@ import java.io.IOException;
  *
  *  LRU（Least recently used，最近最少使用）算法根据数据的历史访问记录来进行淘汰数据，其核心思想是“如果数据最近被访问过，那么将来被访问的几率也更高”。
  *
+ *  使用场景:
+ *  - 对 key 的插入顺序有需要
+ *  - LRU 缓存策略的实现
+ *  - 相对于 HashMap , 插入慢一点, 但是迭代比 HashMap 快
+ *
  * @param <K> the type of keys maintained by this map
  * @param <V> the type of mapped values
  *

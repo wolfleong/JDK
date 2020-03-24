@@ -92,6 +92,8 @@ package java.util;
  * <a href="{@docRoot}/../technotes/guides/collections/index.html">
  * Java Collections Framework</a>.
  *
+ * 对应着 SortedMap 的 key
+ *
  * @param <E> the type of elements maintained by this set
  *
  * @author  Josh Bloch

@@ -124,6 +124,9 @@ import java.util.function.Function;
  * - 当一个链表的元素个数达到一定的数量（且数组的长度达到一定的长度）后，则把链表转化为红黑树，从而提高效率。
  * - 数组的查询效率为O(1)，链表的查询效率是O(k)，红黑树的查询效率是O(log k)，k为桶中的元素个数，所以当元素数量非常多的时候，转化为红黑树能极大地提高效率。
  *
+ * 使用场景:
+ *  - 普通kv接口存储，尽量采用 HashMap
+ *
  * @param <K> the type of keys maintained by this map
  * @param <V> the type of mapped values
  *

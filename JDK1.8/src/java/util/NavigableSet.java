@@ -78,6 +78,8 @@ package java.util;
  * <a href="{@docRoot}/../technotes/guides/collections/index.html">
  * Java Collections Framework</a>.
  *
+ * 对应着 NavigableMap 的 key
+ *
  * @author Doug Lea
  * @author Josh Bloch
  * @param <E> the type of elements maintained by this set

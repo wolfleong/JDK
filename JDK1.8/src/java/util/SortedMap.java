@@ -96,6 +96,8 @@ package java.util;
  * <a href="{@docRoot}/../technotes/guides/collections/index.html">
  * Java Collections Framework</a>.
  *
+ * 继承Map接口，它与Map的主要区别是：它拥有有序的键值对，实现有序的方式是通过实现 Comparator 接口
+ *
  * @param <K> the type of keys maintained by this map
  * @param <V> the type of mapped values
  *
@@ -112,6 +114,7 @@ package java.util;
 
 public interface SortedMap<K,V> extends Map<K,V> {
     /**
+     * 可以自定义排序比较器, 默认是按 key 自然顺序排序
      * Returns the comparator used to order the keys in this map, or
      * {@code null} if this map uses the {@linkplain Comparable
      * natural ordering} of its keys.
@@ -123,6 +126,8 @@ public interface SortedMap<K,V> extends Map<K,V> {
     Comparator<? super K> comparator();
 
     /**
+     * 按key升序排列，返回子映射，fromKey到toKey，包括fromKey，不包括toKey
+     *
      * Returns a view of the portion of this map whose keys range from
      * {@code fromKey}, inclusive, to {@code toKey}, exclusive.  (If
      * {@code fromKey} and {@code toKey} are equal, the returned map
@@ -154,6 +159,7 @@ public interface SortedMap<K,V> extends Map<K,V> {
     SortedMap<K,V> subMap(K fromKey, K toKey);
 
     /**
+     * 按key升序排列，返回子映射，开头到toKey，不包括toKey
      * Returns a view of the portion of this map whose keys are
      * strictly less than {@code toKey}.  The returned map is backed
      * by this map, so changes in the returned map are reflected in
@@ -181,6 +187,7 @@ public interface SortedMap<K,V> extends Map<K,V> {
     SortedMap<K,V> headMap(K toKey);
 
     /**
+     * 按  key 升序排列，返回子映射，fromKey到末尾，包括fromKey
      * Returns a view of the portion of this map whose keys are
      * greater than or equal to {@code fromKey}.  The returned map is
      * backed by this map, so changes in the returned map are
@@ -208,6 +215,7 @@ public interface SortedMap<K,V> extends Map<K,V> {
     SortedMap<K,V> tailMap(K fromKey);
 
     /**
+     * 按key升序排列，返回第一个key
      * Returns the first (lowest) key currently in this map.
      *
      * @return the first (lowest) key currently in this map
@@ -216,6 +224,7 @@ public interface SortedMap<K,V> extends Map<K,V> {
     K firstKey();
 
     /**
+     * 按key升序排列，返回最后一个key
      * Returns the last (highest) key currently in this map.
      *
      * @return the last (highest) key currently in this map
@@ -224,6 +233,7 @@ public interface SortedMap<K,V> extends Map<K,V> {
     K lastKey();
 
     /**
+     * 返回key的集合，升序排列
      * Returns a {@link Set} view of the keys contained in this map.
      * The set's iterator returns the keys in ascending order.
      * The set is backed by the map, so changes to the map are
@@ -243,6 +253,7 @@ public interface SortedMap<K,V> extends Map<K,V> {
     Set<K> keySet();
 
     /**
+     * 返回value的集合，按key升序排列，
      * Returns a {@link Collection} view of the values contained in this map.
      * The collection's iterator returns the values in ascending order
      * of the corresponding keys.
@@ -263,6 +274,7 @@ public interface SortedMap<K,V> extends Map<K,V> {
     Collection<V> values();
 
     /**
+     * 返回Entry的集合，按key升序排列
      * Returns a {@link Set} view of the mappings contained in this map.
      * The set's iterator returns the entries in ascending key order.
      * The set is backed by the map, so changes to the map are

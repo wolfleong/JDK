@@ -95,6 +95,11 @@ import java.util.function.Consumer;
  * <a href="{@docRoot}/../technotes/guides/collections/index.html">
  * Java Collections Framework</a>.
  *
+ * TreeMap使用红黑树存储元素，可以保证元素按key值的大小进行遍历。红黑树的实现已经在 HashMap 中完全跟过, 所以这里只写大概
+ *
+ * 使用场景:
+ *  - 对 key 有排序的需要
+ *
  * @param <K> the type of keys maintained by this map
  * @param <V> the type of mapped values
  *
@@ -113,6 +118,7 @@ public class TreeMap<K,V>
     implements NavigableMap<K,V>, Cloneable, java.io.Serializable
 {
     /**
+     * 比较器，如果没传则key要实现Comparable接口, null 表示使用 key 的自然顺序
      * The comparator used to maintain order in this tree map, or
      * null if it uses the natural ordering of its keys.
      *
@@ -120,6 +126,9 @@ public class TreeMap<K,V>
      */
     private final Comparator<? super K> comparator;
 
+    /**
+     * 根节点
+     */
     private transient Entry<K,V> root;
 
     /**

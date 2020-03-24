@@ -132,6 +132,10 @@ import java.util.function.Consumer;
  * - 采用线性探测的方式解决hash冲突, 跟 ThreadLocalMap 的处理差不多
  * - IdentityHashMap的加载因子为2/3。
  *
+ * 使用场景:
+ *   - 需要直接根据内存地址判断 key 是否重复的场景, 比原来 equals 做判断的性能好很多
+ *     (目前只知道 Netty 的 FastThreadLocal 有使用, ThreadLocalMap 虽然也是内存地址判断是否相等的, 但没有直接用 IdentityHashMap)
+ *
  * @see     System#identityHashCode(Object)
  * @see     Object#hashCode()
  * @see     Collection
