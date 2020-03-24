@@ -72,6 +72,9 @@ import sun.misc.SharedSecrets;
  * <a href="{@docRoot}/../technotes/guides/collections/index.html">
  * Java Collections Framework</a>.
  *
+ * EnumMap 是一个用于存储 key 为枚举类型的 map，底层使用数组实现（K，V 双数组）, 用枚举的序号做数组下标.
+ * 所以, 如果 key 是枚举, 一定要用这个 EnumMap , 性能比 HashMap 好很多
+ *
  * @author Josh Bloch
  * @see EnumSet
  * @since 1.5
@@ -80,6 +83,7 @@ public class EnumMap<K extends Enum<K>, V> extends AbstractMap<K, V>
     implements java.io.Serializable, Cloneable
 {
     /**
+     * key 类型
      * The <tt>Class</tt> object for the enum type of all the keys of this map.
      *
      * @serial
@@ -87,11 +91,13 @@ public class EnumMap<K extends Enum<K>, V> extends AbstractMap<K, V>
     private final Class<K> keyType;
 
     /**
+     * key 数组
      * All of the values comprising K.  (Cached for performance.)
      */
     private transient K[] keyUniverse;
 
     /**
+     * value 数组
      * Array representation of this map.  The ith element is the value
      * to which universe[i] is currently mapped, or null if it isn't
      * mapped to anything, or NULL if it's mapped to null.
@@ -99,11 +105,13 @@ public class EnumMap<K extends Enum<K>, V> extends AbstractMap<K, V>
     private transient Object[] vals;
 
     /**
+     * 键值对个数
      * The number of mappings in this map.
      */
     private transient int size = 0;
 
     /**
+     * value 为 null 时对应的值
      * Distinguished non-null value for representing null values.
      */
     private static final Object NULL = new Object() {
@@ -135,7 +143,9 @@ public class EnumMap<K extends Enum<K>, V> extends AbstractMap<K, V>
      */
     public EnumMap(Class<K> keyType) {
         this.keyType = keyType;
+        // 初始化 key 数组，getKeyUniverse 方法会计算出枚举元素的总数并初始化 key 数组. 枚举的个数是固定的
         keyUniverse = getKeyUniverse(keyType);
+        //// 初始化 value 数组大小
         vals = new Object[keyUniverse.length];
     }
 
