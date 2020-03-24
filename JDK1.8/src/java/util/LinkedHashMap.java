@@ -160,6 +160,8 @@ import java.io.IOException;
  * @see     Hashtable
  * @since   1.4
  */
+//LinkedHashMap内部维护了一个双向链表，能保证元素按插入的顺序访问，也能以访问顺序访问，可以用来实现LRU缓存策略。
+//LinkedHashMap可以看成是 LinkedList + HashMap。
 public class LinkedHashMap<K,V>
     extends HashMap<K,V>
     implements Map<K,V>
@@ -187,6 +189,7 @@ public class LinkedHashMap<K,V>
      */
 
     /**
+     * Entry 的实现类
      * HashMap.Node subclass for normal LinkedHashMap entries.
      */
     static class Entry<K,V> extends HashMap.Node<K,V> {
@@ -199,16 +202,19 @@ public class LinkedHashMap<K,V>
     private static final long serialVersionUID = 3801124242820219131L;
 
     /**
+     * 双向链表的头节点，旧数据存在头节点。
      * The head (eldest) of the doubly linked list.
      */
     transient LinkedHashMap.Entry<K,V> head;
 
     /**
+     * 双向链表的尾节点，新数据存在尾节点。
      * The tail (youngest) of the doubly linked list.
      */
     transient LinkedHashMap.Entry<K,V> tail;
 
     /**
+     * 是否需要按访问顺序排序，如果为false则按插入顺序存储元素，如果是true则按访问顺序存储元素。
      * The iteration ordering method for this linked hash map: <tt>true</tt>
      * for access-order, <tt>false</tt> for insertion-order.
      *
@@ -294,6 +300,21 @@ public class LinkedHashMap<K,V>
             a.before = b;
     }
 
+    /**
+     * 在节点插入之后做些什么，在HashMap中的putVal()方法中被调用，可以看到HashMap中这个方法的实现为空。
+     *
+     * evict，驱逐的意思。
+     *
+     * （1）如果evict为true，且头节点不为空，且确定移除最老的元素，那么就调用HashMap.removeNode()把头节点移除（这里的头节点是双向链表的头节点，而不是某个桶中的第一个元素）；
+     *
+     * （2）HashMap.removeNode()从HashMap中把这个节点移除之后，会调用afterNodeRemoval()方法；
+     *
+     * （3）afterNodeRemoval()方法在LinkedHashMap中也有实现，用来在移除元素后修改双向链表，见下文；
+     *
+     * （4）默认removeEldestEntry()方法返回false，也就是不删除元素。
+     *
+     * @param evict 是否执行清除操作
+     */
     void afterNodeInsertion(boolean evict) { // possibly remove eldest
         LinkedHashMap.Entry<K,V> first;
         if (evict && (first = head) != null && removeEldestEntry(first)) {
@@ -399,6 +420,8 @@ public class LinkedHashMap<K,V>
                          float loadFactor,
                          boolean accessOrder) {
         super(initialCapacity, loadFactor);
+        //前四个构造方法accessOrder都等于false，说明双向链表是按插入顺序存储元素。
+        //最后一个构造方法accessOrder从构造方法参数传入，如果传入true，则就实现了按访问顺序存储元素，这也是实现LRU缓存策略的关键。
         this.accessOrder = accessOrder;
     }
 
