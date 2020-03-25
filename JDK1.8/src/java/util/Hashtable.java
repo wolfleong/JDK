@@ -115,7 +115,8 @@ import java.util.function.BiFunction;
  * to use {@link java.util.concurrent.ConcurrentHashMap} in place of
  * {@code Hashtable}.
  *
- * 数组加链表的实现方式, 所有操作都是 synchronized, 一般不用, 过时了
+ * 数组加链表的实现方式, 所有操作都是 synchronized, 一般不用, 过时了.
+ * 数据结构: 数组 + 链表
  *
  * @author  Arthur van Hoff
  * @author  Josh Bloch

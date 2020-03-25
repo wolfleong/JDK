@@ -259,6 +259,11 @@ import java.util.stream.Stream;
  * <a href="{@docRoot}/../technotes/guides/collections/index.html">
  * Java Collections Framework</a>.
  *
+ * HashMap 的并发实现.
+ *
+ * 数据结构: 数组 + 链表 + 红黑树
+ * 并发实现: synchronized + cas + volatile
+ *
  * @since 1.5
  * @author Doug Lea
  * @param <K> the type of keys maintained by this map

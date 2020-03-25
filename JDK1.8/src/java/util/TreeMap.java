@@ -105,8 +105,10 @@ import java.util.function.Consumer;
  *  （5）TreeMap的遍历不是采用传统的递归式遍历；
  *  （6）TreeMap可以按范围查找元素，查找最近的元素；
  *
+ *  数据结构: 红黑树
+ *
  * 使用场景:
- *  - 对 key 有排序的需要
+ *  - 对 key 有排序的需要, 非线程安全的(如果需要线程安全, 请使用 ConcurrentSkipListMap)
  *
  * @param <K> the type of keys maintained by this map
  * @param <V> the type of mapped values

@@ -73,7 +73,9 @@ import sun.misc.SharedSecrets;
  * Java Collections Framework</a>.
  *
  * EnumMap 是一个用于存储 key 为枚举类型的 map，底层使用数组实现（K，V 双数组）, 用枚举的序号做数组下标.
- * 所以, 如果 key 是枚举, 一定要用这个 EnumMap , 性能比 HashMap 好很多
+ * 所以, 如果 key 是枚举, 一定要用这个 EnumMap , 性能比 HashMap 好很多.
+ *
+ * 数据结构: 双数组
  *
  * @author Josh Bloch
  * @see EnumSet

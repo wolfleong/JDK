@@ -129,6 +129,8 @@ import java.util.function.Consumer;
  * - WeakHashMap 没有实现 Clone 和 Serializable 接口，所以不具有克隆和序列化的特性
  * - 这个实现与 ThreadLocalMap 有点像, 也有内存溢出的风险
  *
+ * 数据结构: 数组 + 链表实现
+ *
  * 使用场景:
  *  - 基于垃圾收集器的弱引用缓存策略的实现
  *  - 垃圾回收的监听回调, 其实这个用 PhantomReference 更好

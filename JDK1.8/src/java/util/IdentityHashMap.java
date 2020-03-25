@@ -127,10 +127,12 @@ import java.util.function.Consumer;
  *
  * - IdentityHashMap利用Hash表来实现Map接口，比较键（和值）时使用引用相等性代替对象相等性，也就是说使用 == 而不是使用 equals。
  * - IdentityHashMap不是Map的通用实现，它有意违反了Map的常规协定。并且IdentityHashMap允许key和value都为null。
- * - IdentityHashMap将所有的key和value都存储到Object[]数组table中，并且key和value相邻存储，当出现哈希冲突时，会往下遍历数组，直到找到一个空闲的位置。
  *   注意，数组第一个位置存储的是key，第二个位置存储的是value。因此奇数位置处存储的是key，偶数位置处存储的是value。
  * - 采用线性探测的方式解决hash冲突, 跟 ThreadLocalMap 的处理差不多
  * - IdentityHashMap的加载因子为2/3。
+ * - IdentityHashMap将所有的key和value都存储到Object[]数组table中，并且key和value相邻存储，当出现哈希冲突时，会往下遍历数组，直到找到一个空闲的位置。
+ *
+ * 数据结构: 数组
  *
  * 使用场景:
  *   - 需要直接根据内存地址判断 key 是否重复的场景, 比原来 equals 做判断的性能好很多
