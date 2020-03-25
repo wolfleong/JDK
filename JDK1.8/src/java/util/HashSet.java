@@ -75,6 +75,12 @@ import java.io.InvalidObjectException;
  * <a href="{@docRoot}/../technotes/guides/collections/index.html">
  * Java Collections Framework</a>.
  *
+ * （1）HashSet内部使用HashMap的key存储元素，以此来保证元素不重复；
+ * （2）HashSet是无序的，因为HashMap的key是无序的；
+ * （3）HashSet中允许有一个null元素，因为HashMap允许key为null；
+ * （4）HashSet是非线程安全的；
+ * （5）HashSet是没有get()方法的；
+ *
  * @param <E> the type of elements maintained by this set
  *
  * @author  Josh Bloch
@@ -92,12 +98,19 @@ public class HashSet<E>
 {
     static final long serialVersionUID = -5024744406713321676L;
 
+    /**
+     * 内部使用 HashMap 来保证
+     */
     private transient HashMap<E,Object> map;
 
+    /**
+     * 虚拟对象，用来作为value放到map中
+     */
     // Dummy value to associate with an Object in the backing Map
     private static final Object PRESENT = new Object();
 
     /**
+     * 构造方法都是调用HashMap对应的构造方法
      * Constructs a new, empty set; the backing <tt>HashMap</tt> instance has
      * default initial capacity (16) and load factor (0.75).
      */
@@ -145,6 +158,7 @@ public class HashSet<E>
     }
 
     /**
+     *  非public，主要是给LinkedHashSet使用的
      * Constructs a new, empty linked hash set.  (This package private
      * constructor is only used by LinkedHashSet.) The backing
      * HashMap instance is a LinkedHashMap with the specified initial

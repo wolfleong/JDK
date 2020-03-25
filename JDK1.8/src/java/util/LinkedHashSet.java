@@ -103,6 +103,11 @@ package java.util;
  * <a href="{@docRoot}/../technotes/guides/collections/index.html">
  * Java Collections Framework</a>.
  *
+ * LinkedHashSet 继承自 HashSet , 调用 HashSet 的非公开构造器来创建 LinkedHashMap
+ *
+ * （1）LinkedHashSet 的底层使用 LinkedHashMap 存储元素。
+ * （2）LinkedHashSet 是有序的，它是按照插入的顺序排序的(不支持按访问顺序对元素排序的, 因为 LinkedHashMap 的 accessOrder 参数是写死的)。
+ *
  * @param <E> the type of elements maintained by this set
  *
  * @author  Josh Bloch
