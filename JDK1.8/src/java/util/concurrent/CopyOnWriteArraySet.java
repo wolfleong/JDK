@@ -88,7 +88,10 @@ import java.util.function.Consumer;
  * <a href="{@docRoot}/../technotes/guides/collections/index.html">
  * Java Collections Framework</a>.
  *
- * 数据结构: CopyOnWriteArrayList
+ * （1）CopyOnWriteArraySet是用CopyOnWriteArrayList实现的；
+ * （2）CopyOnWriteArraySet是有序的，因为底层其实是数组，数组是不是有序的？！
+ * （3）CopyOnWriteArraySet是并发安全的，而且实现了读写分离；
+ * （4）CopyOnWriteArraySet通过调用CopyOnWriteArrayList的addIfAbsent()方法来保证元素不重复；
  *
  * @see CopyOnWriteArrayList
  * @since 1.5
@@ -113,6 +116,7 @@ public class CopyOnWriteArraySet<E> extends AbstractSet<E>
     }
 
     /**
+     * 将集合c中的元素初始化到CopyOnWriteArraySet中
      * Creates a set containing all of the elements of the specified
      * collection.
      *
@@ -120,12 +124,17 @@ public class CopyOnWriteArraySet<E> extends AbstractSet<E>
      * @throws NullPointerException if the specified collection is null
      */
     public CopyOnWriteArraySet(Collection<? extends E> c) {
+        // 如果c是CopyOnWriteArraySet类型，说明没有重复元素，
+        // 直接调用CopyOnWriteArrayList的构造方法初始化
         if (c.getClass() == CopyOnWriteArraySet.class) {
             @SuppressWarnings("unchecked") CopyOnWriteArraySet<E> cc =
                 (CopyOnWriteArraySet<E>)c;
             al = new CopyOnWriteArrayList<E>(cc.al);
         }
         else {
+            // 如果c不是CopyOnWriteArraySet类型，说明有重复元素
+            // 调用CopyOnWriteArrayList的addAllAbsent()方法初始化
+            // 它会把重复元素排除掉
             al = new CopyOnWriteArrayList<E>();
             al.addAllAbsent(c);
         }
@@ -264,6 +273,10 @@ public class CopyOnWriteArraySet<E> extends AbstractSet<E>
      *         element
      */
     public boolean add(E e) {
+        // 添加元素
+        // 这里是调用CopyOnWriteArrayList的addIfAbsent()方法
+        // 它会检测元素不存在的时候才添加
+        // 还记得这个方法吗？当时有分析过的，建议把 CopyOnWriteArrayList 拿出来再看看
         return al.addIfAbsent(e);
     }
 
@@ -371,8 +384,10 @@ public class CopyOnWriteArraySet<E> extends AbstractSet<E>
      * @return {@code true} if the specified object is equal to this set
      */
     public boolean equals(Object o) {
+        // 如果两者是同一个对象，返回true
         if (o == this)
             return true;
+        // 如果o不是Set对象，返回false
         if (!(o instanceof Set))
             return false;
         Set<?> set = (Set<?>)(o);
@@ -381,22 +396,31 @@ public class CopyOnWriteArraySet<E> extends AbstractSet<E>
         // Uses O(n^2) algorithm that is only appropriate
         // for small sets, which CopyOnWriteArraySets should be.
 
+        // 集合元素数组的快照
         //  Use a single snapshot of underlying array
         Object[] elements = al.getArray();
         int len = elements.length;
+        // 我觉得这里的设计不太好
+        // 首先，Set中的元素本来就是不重复的，所以不需要再用个matched[]数组记录有没有出现过
+        // 其次，两个集合的元素个数如果不相等，那肯定不相等了，这个是不是应该作为第一要素先检查
         // Mark matched elements to avoid re-checking
         boolean[] matched = new boolean[len];
         int k = 0;
+        // 从o这个集合开始遍历
         outer: while (it.hasNext()) {
+            // 如果k>len了，说明o中元素多了
             if (++k > len)
                 return false;
+            // 取值
             Object x = it.next();
+            // 遍历检查是否在当前集合中
             for (int i = 0; i < len; ++i) {
                 if (!matched[i] && eq(x, elements[i])) {
                     matched[i] = true;
                     continue outer;
                 }
             }
+            // 如果不在当前集合中，返回false
             return false;
         }
         return k == len;

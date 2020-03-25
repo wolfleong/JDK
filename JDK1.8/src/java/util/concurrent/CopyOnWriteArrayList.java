@@ -84,6 +84,18 @@ import java.util.function.UnaryOperator;
  * <a href="{@docRoot}/../technotes/guides/collections/index.html">
  * Java Collections Framework</a>.
  *
+ * CopyOnWriteArrayList 是 ArrayList 的线程安全版本，内部也是通过数组实现，每次对数组的修改都完全拷贝一份新的数组来修改，
+ * 修改完了再替换掉老数组，这样保证了只阻塞写操作，不阻塞读操作，实现读写分离。
+ *
+ * （1）CopyOnWriteArrayList使用 ReentrantLock 重入锁加锁，保证线程安全；
+ * （2）CopyOnWriteArrayList的写操作都要先拷贝一份新数组，在新数组中做修改，修改完了再用新数组替换老数组，所以空间复杂度是O(n)，性能比较低下；
+ * （3）CopyOnWriteArrayList的读操作支持随机访问，时间复杂度为O(1)；
+ * （4）CopyOnWriteArrayList采用读写分离的思想，读操作不加锁，写操作加锁，且写操作占用较大内存空间，所以适用于读多写少的场合；
+ * （5）CopyOnWriteArrayList只保证最终一致性，不保证实时一致性；
+ *
+ * 为什么CopyOnWriteArrayList没有size属性?
+ * - 因为每次修改都是拷贝一份正好可以存储目标个数元素的数组，所以不需要size属性了，数组的长度就是集合的大小，而不像ArrayList数组的长度实际是要大于集合的大小的。
+ *
  * @since 1.5
  * @author Doug Lea
  * @param <E> the type of elements held in this collection
@@ -92,9 +104,11 @@ public class CopyOnWriteArrayList<E>
     implements List<E>, RandomAccess, Cloneable, java.io.Serializable {
     private static final long serialVersionUID = 8673264195747942595L;
 
+    //用于修改时加锁
     /** The lock protecting all mutators */
     final transient ReentrantLock lock = new ReentrantLock();
 
+    //真正存储元素的地方，只能通过getArray()/setArray()访问
     /** The array, accessed only via getArray/setArray. */
     private transient volatile Object[] array;
 
@@ -117,6 +131,7 @@ public class CopyOnWriteArrayList<E>
      * Creates an empty list.
      */
     public CopyOnWriteArrayList() {
+        // 所有对array的操作都是通过setArray()和getArray()进行
         setArray(new Object[0]);
     }
 
@@ -131,9 +146,14 @@ public class CopyOnWriteArrayList<E>
     public CopyOnWriteArrayList(Collection<? extends E> c) {
         Object[] elements;
         if (c.getClass() == CopyOnWriteArrayList.class)
+            // 如果c也是CopyOnWriteArrayList类型
+            // 那么直接把它的数组拿过来使用
             elements = ((CopyOnWriteArrayList<?>)c).getArray();
         else {
+            // 否则调用其toArray()方法将集合元素转化为数组
             elements = c.toArray();
+            // 这里c.toArray()返回的不一定是Object[]类型
+            // 详细原因见ArrayList里面的分析
             // c.toArray might (incorrectly) not return Object[] (see 6260652)
             if (elements.getClass() != Object[].class)
                 elements = Arrays.copyOf(elements, elements.length, Object[].class);
@@ -384,6 +404,9 @@ public class CopyOnWriteArrayList<E>
 
     @SuppressWarnings("unchecked")
     private E get(Object[] a, int index) {
+        // 获取元素不需要加锁
+        // 直接返回index位置的元素
+        // 这里是没有做越界检查的, 因为数组本身会做越界检查
         return (E) a[index];
     }
 
@@ -432,15 +455,21 @@ public class CopyOnWriteArrayList<E>
      */
     public boolean add(E e) {
         final ReentrantLock lock = this.lock;
+        // 加锁
         lock.lock();
         try {
+            // 获取旧数组
             Object[] elements = getArray();
             int len = elements.length;
+            // 将旧数组元素拷贝到新数组中
+            // 新数组大小是旧数组大小加1
             Object[] newElements = Arrays.copyOf(elements, len + 1);
+            // 将元素放在最后一位
             newElements[len] = e;
             setArray(newElements);
             return true;
         } finally {
+            // 释放锁
             lock.unlock();
         }
     }
@@ -454,26 +483,38 @@ public class CopyOnWriteArrayList<E>
      */
     public void add(int index, E element) {
         final ReentrantLock lock = this.lock;
+        // 加锁
         lock.lock();
         try {
+            // 获取旧数组
             Object[] elements = getArray();
             int len = elements.length;
+            // 检查是否越界, 可以等于len
             if (index > len || index < 0)
                 throw new IndexOutOfBoundsException("Index: "+index+
                                                     ", Size: "+len);
             Object[] newElements;
             int numMoved = len - index;
             if (numMoved == 0)
+                // 如果插入的位置是最后一位
+                // 那么拷贝一个n+1的数组, 其前n个元素与旧数组一致
                 newElements = Arrays.copyOf(elements, len + 1);
             else {
+                // 如果插入的位置不是最后一位
+                // 那么新建一个n+1的数组
                 newElements = new Object[len + 1];
+                // 拷贝旧数组前index的元素到新数组中
                 System.arraycopy(elements, 0, newElements, 0, index);
+                // 将index及其之后的元素往后挪一位拷贝到新数组中
+                // 这样正好index位置是空出来的
                 System.arraycopy(elements, index, newElements, index + 1,
                                  numMoved);
             }
+            // 将元素放置在index处
             newElements[index] = element;
             setArray(newElements);
         } finally {
+            // 释放锁
             lock.unlock();
         }
     }
@@ -487,23 +528,33 @@ public class CopyOnWriteArrayList<E>
      */
     public E remove(int index) {
         final ReentrantLock lock = this.lock;
+        // 加锁
         lock.lock();
         try {
+            // 获取旧数组
             Object[] elements = getArray();
             int len = elements.length;
             E oldValue = get(elements, index);
             int numMoved = len - index - 1;
             if (numMoved == 0)
+                // 如果移除的是最后一位
+                // 那么直接拷贝一份n-1的新数组, 最后一位就自动删除了
                 setArray(Arrays.copyOf(elements, len - 1));
             else {
+                // 如果移除的不是最后一位
+                // 那么新建一个n-1的新数组
                 Object[] newElements = new Object[len - 1];
+                // 将前index的元素拷贝到新数组中
                 System.arraycopy(elements, 0, newElements, 0, index);
+                // 将index后面(不包含)的元素往前挪一位
+                // 这样正好把index位置覆盖掉了, 相当于删除了
                 System.arraycopy(elements, index + 1, newElements, index,
                                  numMoved);
                 setArray(newElements);
             }
             return oldValue;
         } finally {
+            // 释放锁
             lock.unlock();
         }
     }
@@ -609,35 +660,53 @@ public class CopyOnWriteArrayList<E>
      * @return {@code true} if the element was added
      */
     public boolean addIfAbsent(E e) {
+        // 获取元素数组, 取名为快照
         Object[] snapshot = getArray();
+        // 检查如果元素不存在,直接返回false
+        // 如果存在再调用addIfAbsent()方法添加元素
         return indexOf(e, snapshot, 0, snapshot.length) >= 0 ? false :
             addIfAbsent(e, snapshot);
     }
 
     /**
+     * 要注意一个条件, 能进来这个方法中, 就表明快照数组中是不存在元素 e 的
      * A version of addIfAbsent using the strong hint that given
      * recent snapshot does not contain e.
      */
     private boolean addIfAbsent(E e, Object[] snapshot) {
         final ReentrantLock lock = this.lock;
+        // 加锁
         lock.lock();
         try {
+            // 重新获取旧数组
             Object[] current = getArray();
             int len = current.length;
+            // 如果快照与刚获取的数组不一致
+            // 并发环境下造成的不一致情况
+            // 因为获取快照数组的时候没有加锁，别的线程可能修改了原数组，
+            // 就会造成快照数组与原数组不一致
             if (snapshot != current) {
+                // 获取较小的数组长度
                 // Optimize for lost race to another addXXX operation
                 int common = Math.min(snapshot.length, len);
+                //可以分两种情况考虑，1 添加的时候删除了元素 2 一直添加元素
                 for (int i = 0; i < common; i++)
+                    //注意: snapshot 是肯定不存在 e 的
+                    // 如果同一个索引位置的元素引用不相等, 则表明这个索引的元素被修改过. 然后用新的数组的元素跟给定的 e 判断是否相等, 相等则存在
                     if (current[i] != snapshot[i] && eq(e, current[i]))
                         return false;
+                //和上面的 for 循环正好组成一个数组大小，用于判断原数组中是否已经存在添加的元素
                 if (indexOf(e, current, common, len) >= 0)
                         return false;
             }
+            // 拷贝一份n+1的数组
             Object[] newElements = Arrays.copyOf(current, len + 1);
+            // 将元素放在最后一位
             newElements[len] = e;
             setArray(newElements);
             return true;
         } finally {
+            // 释放锁
             lock.unlock();
         }
     }
