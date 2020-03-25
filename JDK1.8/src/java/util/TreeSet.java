@@ -77,6 +77,10 @@ package java.util;
  * <a href="{@docRoot}/../technotes/guides/collections/index.html">
  * Java Collections Framework</a>.
  *
+ * - TreeSet底层是采用TreeMap实现的一种Set，所以它是有序的，同样也是非线程安全的。
+ * - TreeSet实现了NavigableSet接口，所以它是有序的
+ * - TreeSet的底层不完全是使用 TreeMap 来实现的，更准确地说，应该是 NavigableMap。
+ *
  * @param <E> the type of elements maintained by this set
  *
  * @author  Josh Bloch
@@ -93,14 +97,21 @@ public class TreeSet<E> extends AbstractSet<E>
     implements NavigableSet<E>, Cloneable, java.io.Serializable
 {
     /**
+     * 元素存储在NavigableMap中, 注意它不一定就是TreeMap
      * The backing map.
      */
     private transient NavigableMap<E,Object> m;
 
+    /**
+     * 虚拟元素, 用来作为value存储在map中
+     */
     // Dummy value to associate with an Object in the backing Map
     private static final Object PRESENT = new Object();
 
     /**
+     *  直接使用传进来的NavigableMap存储元素
+     *  这里不是深拷贝,如果外面的map有增删元素也会反映到这里
+     *  而且, 这个方法不是 public 的, 说明只能给同包使用
      * Constructs a set backed by the specified navigable map.
      */
     TreeSet(NavigableMap<E,Object> m) {

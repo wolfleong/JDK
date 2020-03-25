@@ -88,6 +88,8 @@ import java.util.function.Consumer;
  * <a href="{@docRoot}/../technotes/guides/collections/index.html">
  * Java Collections Framework</a>.
  *
+ * 数据结构: CopyOnWriteArrayList
+ *
  * @see CopyOnWriteArrayList
  * @since 1.5
  * @author Doug Lea
@@ -97,12 +99,16 @@ public class CopyOnWriteArraySet<E> extends AbstractSet<E>
         implements java.io.Serializable {
     private static final long serialVersionUID = 5457747651344034263L;
 
+    /**
+     * 内部使用CopyOnWriteArrayList存储元素
+     */
     private final CopyOnWriteArrayList<E> al;
 
     /**
      * Creates an empty set.
      */
     public CopyOnWriteArraySet() {
+        //创建
         al = new CopyOnWriteArrayList<E>();
     }
 
