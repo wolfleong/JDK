@@ -81,23 +81,30 @@ public abstract class EnumSet<E extends Enum<E>> extends AbstractSet<E>
     implements Cloneable, java.io.Serializable
 {
     /**
+     *  保存的数据类型
      * The class of all the elements of this set.
      */
     final Class<E> elementType;
 
     /**
+     * 保存数据的数组
      * All of the values comprising T.  (Cached for performance.)
      */
     final Enum<?>[] universe;
 
     private static Enum<?>[] ZERO_LENGTH_ENUM_ARRAY = new Enum<?>[0];
 
+    /**
+     * EnumSet只有一个构造方法，不过该方法不是public的，不对外使用，只供子类继承时使用。
+     */
     EnumSet(Class<E>elementType, Enum<?>[] universe) {
         this.elementType = elementType;
         this.universe    = universe;
     }
 
     /**
+     * 生成一个空的EnumSet，并指定其数据类型
+     *
      * Creates an empty enum set with the specified element type.
      *
      * @param <E> The class of the elements in the set
@@ -111,6 +118,7 @@ public abstract class EnumSet<E extends Enum<E>> extends AbstractSet<E>
         if (universe == null)
             throw new ClassCastException(elementType + " not an enum");
 
+        //如果枚举元素的数量大于64，那么实际创建的是JumboEnumSet实现类，否则是RegularEnumSet实现类。
         if (universe.length <= 64)
             return new RegularEnumSet<>(elementType, universe);
         else
@@ -118,6 +126,9 @@ public abstract class EnumSet<E extends Enum<E>> extends AbstractSet<E>
     }
 
     /**
+     * allOf 方法是创建一个包含指定类型的所有元素的EnumSet
+     * 通过源码可以看到，是先调用noneof方法创建一个空的Set，然后在调用EnumSet的addAll方法；
+     *
      * Creates an enum set containing all of the elements in the specified
      * element type.
      *
@@ -153,6 +164,8 @@ public abstract class EnumSet<E extends Enum<E>> extends AbstractSet<E>
     }
 
     /**
+     * 创建一个EnumSet，从指定集合拷贝数据
+     *
      * Creates an enum set initialized from the specified collection.  If
      * the specified collection is an <tt>EnumSet</tt> instance, this static
      * factory method behaves identically to {@link #copyOf(EnumSet)}.
@@ -167,11 +180,14 @@ public abstract class EnumSet<E extends Enum<E>> extends AbstractSet<E>
      * @throws NullPointerException if <tt>c</tt> is null
      */
     public static <E extends Enum<E>> EnumSet<E> copyOf(Collection<E> c) {
+        // 判断如果集合类型是EnumSet类型，则调用clone方法拷贝
         if (c instanceof EnumSet) {
             return ((EnumSet<E>)c).clone();
         } else {
+            // 如果集合是空，直接抛异常
             if (c.isEmpty())
                 throw new IllegalArgumentException("Collection is empty");
+            // 通过Iterator迭代器实现拷贝
             Iterator<E> i = c.iterator();
             E first = i.next();
             EnumSet<E> result = EnumSet.of(first);
@@ -182,6 +198,7 @@ public abstract class EnumSet<E extends Enum<E>> extends AbstractSet<E>
     }
 
     /**
+     * 去除已有元素的方法
      * Creates an enum set with the same element type as the specified enum
      * set, initially containing all the elements of this type that are
      * <i>not</i> contained in the specified set.
@@ -365,6 +382,7 @@ public abstract class EnumSet<E extends Enum<E>> extends AbstractSet<E>
     }
 
     /**
+     * 添加从 from 到 to 之间的枚举, 添加之前必须保证 EnumSet 是空的, 否则会复盖原来的值
      * Adds the specified range to this enum set, which is empty prior
      * to the call.
      */

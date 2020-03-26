@@ -29,6 +29,8 @@ package java.util;
  * Private implementation class for EnumSet, for "jumbo" enum types
  * (i.e., those with more than 64 elements).
  *
+ * JumboEnumSet 也是通过二进制运算得到结果，使用long来存放元素，但是它是使用数组来存放元素。
+ *
  * @author Josh Bloch
  * @since 1.5
  * @serial exclude

@@ -87,6 +87,11 @@ import java.util.Spliterator;
  * <a href="{@docRoot}/../technotes/guides/collections/index.html">
  * Java Collections Framework</a>.
  *
+ *
+ * （1）ConcurrentSkipListSet底层是使用ConcurrentNavigableMap实现的；
+ * （2）ConcurrentSkipListSet有序的，基于元素的自然排序或者通过比较器确定的顺序；
+ * （3）ConcurrentSkipListSet是线程安全的；
+ *
  * @author Doug Lea
  * @param <E> the type of elements maintained by this set
  * @since 1.6
@@ -98,6 +103,7 @@ public class ConcurrentSkipListSet<E>
     private static final long serialVersionUID = -2479143111061671589L;
 
     /**
+     * 存储使用的map
      * The underlying map. Uses Boolean.TRUE as value for each
      * element.  This field is declared final for the sake of thread
      * safety, which entails some ugliness in clone().
@@ -109,6 +115,7 @@ public class ConcurrentSkipListSet<E>
      * their {@linkplain Comparable natural ordering}.
      */
     public ConcurrentSkipListSet() {
+        //初始化
         m = new ConcurrentSkipListMap<E,Object>();
     }
 
@@ -136,6 +143,8 @@ public class ConcurrentSkipListSet<E>
      *         of its elements are null
      */
     public ConcurrentSkipListSet(Collection<? extends E> c) {
+        // 使用ConcurrentSkipListMap初始化map
+        // 并将集合c中所有元素放入到map中
         m = new ConcurrentSkipListMap<E,Object>();
         addAll(c);
     }
