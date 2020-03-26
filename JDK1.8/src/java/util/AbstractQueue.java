@@ -92,6 +92,7 @@ public abstract class AbstractQueue<E>
      *         prevents it from being added to this queue
      */
     public boolean add(E e) {
+        // 调用offer(e)如果成功返回true，如果失败抛出异常
         if (offer(e))
             return true;
         else
@@ -110,10 +111,13 @@ public abstract class AbstractQueue<E>
      * @throws NoSuchElementException if this queue is empty
      */
     public E remove() {
+        // 调用poll()方法出队
         E x = poll();
         if (x != null)
+            // 如果有元素出队就返回这个元素
             return x;
         else
+            // 如果没有元素出队就抛出异常
             throw new NoSuchElementException();
     }
 

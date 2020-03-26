@@ -173,12 +173,15 @@ import java.util.Queue;
  * <a href="{@docRoot}/../technotes/guides/collections/index.html">
  * Java Collections Framework</a>.
  *
+ * 阻塞队列
+ *
  * @since 1.5
  * @author Doug Lea
  * @param <E> the type of elements held in this collection
  */
 public interface BlockingQueue<E> extends Queue<E> {
     /**
+     * 入队, 成功会返回 true,  队列满时会抛异常
      * Inserts the specified element into this queue if it is possible to do
      * so immediately without violating capacity restrictions, returning
      * {@code true} upon success and throwing an
@@ -199,6 +202,7 @@ public interface BlockingQueue<E> extends Queue<E> {
     boolean add(E e);
 
     /**
+     * 入队, 成功则返回 true, 失败则返回 false (队列满时会失败)
      * Inserts the specified element into this queue if it is possible to do
      * so immediately without violating capacity restrictions, returning
      * {@code true} upon success and {@code false} if no space is currently
@@ -218,6 +222,7 @@ public interface BlockingQueue<E> extends Queue<E> {
     boolean offer(E e);
 
     /**
+     * 入队, 如果队列满时会阻塞线程, 直到可入队为止
      * Inserts the specified element into this queue, waiting if necessary
      * for space to become available.
      *
@@ -232,6 +237,7 @@ public interface BlockingQueue<E> extends Queue<E> {
     void put(E e) throws InterruptedException;
 
     /**
+     * 入队, 如果队列满时会阻塞线程, 直到可入队或超时为止
      * Inserts the specified element into this queue, waiting up to the
      * specified wait time if necessary for space to become available.
      *
@@ -253,6 +259,7 @@ public interface BlockingQueue<E> extends Queue<E> {
         throws InterruptedException;
 
     /**
+     * 出队, 如果队列空时会阻塞线程, 直到有元素出队为止
      * Retrieves and removes the head of this queue, waiting if necessary
      * until an element becomes available.
      *
@@ -262,6 +269,7 @@ public interface BlockingQueue<E> extends Queue<E> {
     E take() throws InterruptedException;
 
     /**
+     * 出队, 如果队列空时会阻塞线程, 直到有元素出队或超时为止
      * Retrieves and removes the head of this queue, waiting up to the
      * specified wait time if necessary for an element to become available.
      *
@@ -292,6 +300,7 @@ public interface BlockingQueue<E> extends Queue<E> {
     int remainingCapacity();
 
     /**
+     * 从队列中删除数据，成功则返回true，否则为false
      * Removes a single instance of the specified element from this queue,
      * if it is present.  More formally, removes an element {@code e} such
      * that {@code o.equals(e)}, if this queue contains one or more such
@@ -310,6 +319,7 @@ public interface BlockingQueue<E> extends Queue<E> {
     boolean remove(Object o);
 
     /**
+     * 判断对象是否在队列中
      * Returns {@code true} if this queue contains the specified element.
      * More formally, returns {@code true} if and only if this queue contains
      * at least one element {@code e} such that {@code o.equals(e)}.
@@ -325,6 +335,7 @@ public interface BlockingQueue<E> extends Queue<E> {
     public boolean contains(Object o);
 
     /**
+     * 从该队列中删除所有可用的元素，并将它们添加到给定的集合中。
      * Removes all available elements from this queue and adds them
      * to the given collection.  This operation may be more
      * efficient than repeatedly polling this queue.  A failure
@@ -350,6 +361,7 @@ public interface BlockingQueue<E> extends Queue<E> {
     int drainTo(Collection<? super E> c);
 
     /**
+     * 最多从该队列中删除给定数量的可用元素，并将它们添加到给定的集合中。
      * Removes at most the given number of available elements from
      * this queue and adds them to the given collection.  A failure
      * encountered while attempting to add elements to
