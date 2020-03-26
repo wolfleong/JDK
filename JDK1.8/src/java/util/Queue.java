@@ -124,6 +124,7 @@ package java.util;
  * always well-defined for queues with the same elements but different
  * ordering properties.
  *
+ * 队列, 队头出队, 队尾入队
  *
  * <p>This interface is a member of the
  * <a href="{@docRoot}/../technotes/guides/collections/index.html">
@@ -143,6 +144,7 @@ package java.util;
  */
 public interface Queue<E> extends Collection<E> {
     /**
+     * 入队, add方法继承自Collection，当Queue的元素已经到达限制数目时，add会抛出一个IllegalStateException异常
      * Inserts the specified element into this queue if it is possible to do so
      * immediately without violating capacity restrictions, returning
      * {@code true} upon success and throwing an {@code IllegalStateException}
@@ -162,6 +164,7 @@ public interface Queue<E> extends Collection<E> {
     boolean add(E e);
 
     /**
+     * 入队, offer方法仅仅定位于应用在有界Queue的情况下，当Queue已经装满时，offer会返回false
      * Inserts the specified element into this queue if it is possible to do
      * so immediately without violating capacity restrictions.
      * When using a capacity-restricted queue, this method is generally
@@ -181,6 +184,7 @@ public interface Queue<E> extends Collection<E> {
     boolean offer(E e);
 
     /**
+     * 出队, 当Queue为空时，抛出NoSuchElementException异常
      * Retrieves and removes the head of this queue.  This method differs
      * from {@link #poll poll} only in that it throws an exception if this
      * queue is empty.
@@ -191,6 +195,7 @@ public interface Queue<E> extends Collection<E> {
     E remove();
 
     /**
+     * 出队, 当Queue为空时，返回 null
      * Retrieves and removes the head of this queue,
      * or returns {@code null} if this queue is empty.
      *
@@ -199,6 +204,7 @@ public interface Queue<E> extends Collection<E> {
     E poll();
 
     /**
+     * 获取队头元素, 不删除该元素, 如果队列为空, 则报异常 NoSuchElementException
      * Retrieves, but does not remove, the head of this queue.  This method
      * differs from {@link #peek peek} only in that it throws an exception
      * if this queue is empty.
@@ -209,6 +215,7 @@ public interface Queue<E> extends Collection<E> {
     E element();
 
     /**
+     * 获取队头元素, 不删除该元素, 如果队列为空, 则返回 null
      * Retrieves, but does not remove, the head of this queue,
      * or returns {@code null} if this queue is empty.
      *
