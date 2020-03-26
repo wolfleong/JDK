@@ -29,7 +29,9 @@ package java.util;
  * Private implementation class for EnumSet, for "jumbo" enum types
  * (i.e., those with more than 64 elements).
  *
- * JumboEnumSet 也是通过二进制运算得到结果，使用long来存放元素，但是它是使用数组来存放元素。
+ * JumboEnumSet 也是通过二进制运算得到结果，使用 long 来存放元素，但是它是使用数组来存放元素, 也就是多个 long。
+ * 相当于, 当枚举个数超过 64 之后, 会将超过的部分放另一个 long 中, 位计算方式还是跟 RegularEnumSet 差不多
+ * 如: 130 个枚举值, 数组长度就为3, 第0个long存 0 到 63 位, 第 1 个存 64 到 127 位, 第 2 个 long 存 128 到 129 位
  *
  * @author Josh Bloch
  * @since 1.5
@@ -50,6 +52,7 @@ class JumboEnumSet<E extends Enum<E>> extends EnumSet<E> {
 
     JumboEnumSet(Class<E>elementType, Enum<?>[] universe) {
         super(elementType, universe);
+        //(universe.length + 63) >>> 6 计算一个合适的数组长度, 如: (65或128 ) + 63 / 64 都等于 2, 两个long
         elements = new long[(universe.length + 63) >>> 6];
     }
 
@@ -70,8 +73,10 @@ class JumboEnumSet<E extends Enum<E>> extends EnumSet<E> {
     }
 
     void addAll() {
+        //循环设置数组里的long是-1，-1的二进制是1111....1111, 也就是满
         for (int i = 0; i < elements.length; i++)
             elements[i] = -1;
+        //最后一个 long 可能不足 64 位, 所以要计算
         elements[elements.length - 1] >>>= -universe.length;
         size = universe.length;
     }
