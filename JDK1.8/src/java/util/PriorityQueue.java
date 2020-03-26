@@ -827,7 +827,7 @@ public class PriorityQueue<E> extends AbstractQueue<E>
     @SuppressWarnings("unchecked")
     private void siftDownComparable(int k, E x) {
         Comparable<? super E> key = (Comparable<? super E>)x;
-        // 只需要比较一半就行了，因为叶子节点占了一半的元素
+        // 只需要比较一半就行了，因为叶子节点占了一半的元素. 不用遍历叶子节点, 进入 while 之后, 会跟左右子节点进行对比
         //计算非叶子结点元素的最大位置，循环的终止条件（在最后一个非叶子节点处结束）
         int half = size >>> 1;        // loop while a non-leaf
         while (k < half) {
