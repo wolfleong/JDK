@@ -173,7 +173,7 @@ import java.util.Queue;
  * <a href="{@docRoot}/../technotes/guides/collections/index.html">
  * Java Collections Framework</a>.
  *
- * 阻塞队列
+ * java 并发包下的阻塞队列接口, 子类都是线程安全的
  *
  * @since 1.5
  * @author Doug Lea

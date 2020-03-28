@@ -1224,6 +1224,12 @@ public class ConcurrentSkipListMap<K,V> extends AbstractMap<K,V>
                     // 如果删除失败，说明其它线程先一步修改了，从头来过
                     break;
 
+                //边删除边插入会有并发的问题, 下面的运行过程会导致多删除了 s 节点(所以需要 marker 节点来确保)
+                //1. 线程 A 判断 n.value != null
+                //2. 线程 B 设置 n.value =  null
+                //3. 线程 B 删除 n:  b.casNext(n,f)
+                //4. 线程 A 插入 s , n => s => f
+
                 // P.S.到了这里n的值肯定是设置成null了
 
                 // 关键！！！！
@@ -1234,7 +1240,7 @@ public class ConcurrentSkipListMap<K,V> extends AbstractMap<K,V>
                 // 这里有两层意思：
                 // 一是如果标记market成功，再尝试将b的下个节点指向下下个节点，如果第二步失败了，进入条件，如果成功了就不用进入条件了
                 // 二是如果标记market失败了，直接进入条件
-                if (!n.appendMarker(f) || !b.casNext(n, f))
+                if (!n.appendMarker(f) || !b.casNext(n, f)) // b => n => marker => f
                     //为什么要有上面两步同时保证正确删除呢, 主要是由并发的两个原因
                     //n.appendMarker(f) 如果成功, 则表示别的线程没有在节点 n 和 f 中间插入过节点, 所以可以执行下一个判断,
                     //如果失败, 则表示n 和 f 中间有新的节点, 则要重新遍历来处理删除操作
