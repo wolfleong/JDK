@@ -98,6 +98,21 @@ import java.util.function.Consumer;
  * <a href="{@docRoot}/../technotes/guides/collections/index.html">
  * Java Collections Framework</a>.
  *
+ * ConcurrentLinkedQueue只实现了Queue接口，并没有实现BlockingQueue接口，所以它不是阻塞队列，也不能用于线程池中，但是它是线程安全的，可用于多线程环境中。
+ * （1）ConcurrentLinkedQueue不是阻塞队列；
+ * （2）ConcurrentLinkedQueue不能用在线程池中；
+ * （3）ConcurrentLinkedQueue使用（CAS+自旋）更新头尾节点控制出队入队操作；
+ *
+ * ConcurrentLinkedQueue与LinkedBlockingQueue对比？
+ *
+ * （1）两者都是线程安全的队列；
+ * （2）两者都可以实现取元素时队列为空直接返回null，后者的poll()方法可以实现此功能；
+ * （3）前者全程无锁，后者全部都是使用重入锁控制的；
+ * （4）前者效率较高，后者效率较低；
+ * （5）前者无法实现如果队列为空等待元素到来的操作；
+ * （6）前者是非阻塞队列，后者是阻塞队列；
+ * （7）前者无法用在线程池中，后者可以；
+ *
  * @since 1.5
  * @author Doug Lea
  * @param <E> the type of elements held in this collection
@@ -177,6 +192,18 @@ public class ConcurrentLinkedQueue<E> extends AbstractQueue<E>
      * optimization.
      */
 
+    /**
+     * 单链表节点.
+     *
+     * z(item == null) => a(item == null , next == this)
+     * b(item == null) => c(head, item == null) => d ( item == null) => e(item == null) => f (item != null)
+     *
+     * 单向链表节点有三种状态:
+     * 1. 节点的 item 不为 null , 正常的节点, 如: f
+     * 2. 节点的 item 为 null
+     *    - 在 head 之后的, 算失效(出队)的节点, 但未删除, 还在链表中, 如: c, d, e
+     *    - 在 head 之前的, 算删除的节点, 如: z, a, b ( a 原来肯定是在 c 之前的, a 这种已经完全踢出链表了)
+     */
     private static class Node<E> {
         volatile E item;
         volatile Node<E> next;
@@ -222,6 +249,7 @@ public class ConcurrentLinkedQueue<E> extends AbstractQueue<E>
     }
 
     /**
+     * // 链表头节点
      * A node from which the first live (non-deleted) node (if any)
      * can be reached in O(1) time.
      * Invariants:
@@ -236,6 +264,7 @@ public class ConcurrentLinkedQueue<E> extends AbstractQueue<E>
     private transient volatile Node<E> head;
 
     /**
+     * // 链表尾节点
      * A node from which the last node on list (that is, the unique
      * node with node.next == null) can be reached in O(1) time.
      * Invariants:
@@ -253,6 +282,7 @@ public class ConcurrentLinkedQueue<E> extends AbstractQueue<E>
      * Creates a {@code ConcurrentLinkedQueue} that is initially empty.
      */
     public ConcurrentLinkedQueue() {
+        // 默认会构造一个 dummy 节点, dummy 的存在是防止一些特殊复杂代码的出现
         head = tail = new Node<E>(null);
     }
 
@@ -267,6 +297,7 @@ public class ConcurrentLinkedQueue<E> extends AbstractQueue<E>
      */
     public ConcurrentLinkedQueue(Collection<? extends E> c) {
         Node<E> h = null, t = null;
+        // 遍历c，并把它元素全部添加到单链表中
         for (E e : c) {
             checkNotNull(e);
             Node<E> newNode = new Node<E>(e);
@@ -277,6 +308,7 @@ public class ConcurrentLinkedQueue<E> extends AbstractQueue<E>
                 t = newNode;
             }
         }
+        //如果集合为空, 则初始化空节点
         if (h == null)
             h = t = new Node<E>(null);
         head = h;
@@ -298,21 +330,28 @@ public class ConcurrentLinkedQueue<E> extends AbstractQueue<E>
     }
 
     /**
+     * 重新设置 head 节点, 相当于把 h(包括h) 到 p(不包括p) 节点之前的无效节点都删除
      * Tries to CAS head to p. If successful, repoint old head to itself
      * as sentinel for succ(), below.
      */
     final void updateHead(Node<E> h, Node<E> p) {
+        //判断给定节点跟原节点不一样再更新, 并且设置 h 离线
         if (h != p && casHead(h, p))
             h.lazySetNext(h);
     }
 
     /**
+     * 注意: head 的设置会一直往下走的, 不会重复往前的, 如: p(old head) => a => b => c (new head)
+     * 当发现 p.next = p , 就表明 p 已经被删除, 而 p 到 新 head 之前的节点也被删除,
+     * 也就是用新的 head 当做 next 也就相当于顺着链表遍历
      * Returns the successor of p, or the head node if p.next has been
      * linked to self, which will only be true if traversing with a
      * stale pointer that is now off the list.
      */
     final Node<E> succ(Node<E> p) {
+        //获取下一个节点
         Node<E> next = p.next;
+        //如果节点已经被删除, 则从头开始, 否则返回 next
         return (p == next) ? head : next;
     }
 
@@ -324,55 +363,91 @@ public class ConcurrentLinkedQueue<E> extends AbstractQueue<E>
      * @throws NullPointerException if the specified element is null
      */
     public boolean offer(E e) {
+        // 不能添加空元素
         checkNotNull(e);
+        // 新节点
         final Node<E> newNode = new Node<E>(e);
 
+        // p用来表示队列的尾节点，默认情况下等于tail节点
         for (Node<E> t = tail, p = t;;) {
+            //  t 不一定等于最新的 tail, 最新的 tail 又不一定等于链表最后一个节点
+
+            //获取 p 的next
             Node<E> q = p.next;
+            // q == null, 说明 p 是 last Node, 也就是尾部
             if (q == null) {
                 // p is last node
+                // cas 添加新节点到链表尾部
                 if (p.casNext(null, newNode)) {
                     // Successful CAS is the linearization point
                     // for e to become an element of this queue,
                     // and for newNode to become "live".
+                    //如果一切顺利, 第一次进来的话, p 是肯定等于 t 的, 如果经历了下面的分支就不一定了
+                    //每每经过一次 p = q 操作(向后遍历节点), 则 p != t 成立, 这个也说明 tail 滞后于 head 的体现
                     if (p != t) // hop two nodes at a time
+                        //更新 t 为最后的节点, 有可能不成功, 因为别的线程可能先执行 casTail(t, newNode) 改了 tail
                         casTail(t, newNode);  // Failure is OK.
+                    // 返回入队成功
                     return true;
                 }
                 // Lost CAS race to another thread; re-read next
             }
+            // p == q 想当于 p == p.next , 也就是 p 被删除了
             else if (p == q)
+                // 如果 p 已经被删除了, 那么要重新确定 tail
+                // (t != (t = tail)) ? t : head 这代码表示, 用 tail 更新 t 并跟现在的 t 对比, 再确定取 t 还是 head
+                // 如果现在的 t 还是等于现在的 tail 的话, 则 tail 还没有更新过, 则跳到 head (head 肯定在 p 后面)
+                // 如果现在的 t 不等于最新的 tail 的话, 就证明 tail 已经更改过, 则用 tail
                 // We have fallen off list.  If tail is unchanged, it
                 // will also be off-list, in which case we need to
                 // jump to head, from which all live nodes are always
                 // reachable.  Else the new tail is a better bet.
                 p = (t != (t = tail)) ? t : head;
             else
+                // 在这里表明, p 没有被删除, 且 q 不为 null, p 还不是最后一个节点, 将 p 更新, 以重新获取尾节点
                 // Check for tail updates after two hops.
                 p = (p != t && t != (t = tail)) ? t : q;
+                // 如果 p = t , 说明还没有向后遍历过, t 是最新的 tail , 则直接用 q 向后遍历
+                // 如果 p != t, 说明已经执行过 p = q 了, 那么尝试更新 t 为最新的 tail,
+                // 如果最新的 tail 还是等于原来的 t 的话, 则继续用 q 向后遍历, 如果最新的 tail 不等于原来的 t, 则用最新的 tail 遍历, 用新的 tail 可能更快到达最后的尾节点
         }
     }
 
     public E poll() {
         restartFromHead:
         for (;;) {
+            // 进行变量的初始化 p = h = head,
             for (Node<E> h = head, p = h, q;;) {
                 E item = p.item;
 
+                // 若 node.item != null, 则进行cas操作, cas成功则返回值
                 if (item != null && p.casItem(item, null)) {
                     // Successful CAS is the linearization point
                     // for item to be removed from this queue.
+                    // 如果第一轮遍历就找到 item != null, 那么 p 是肯定等于 h, 就不会更新 head
+                    // 如果 p != h , 表明通过最后一个 else 的 p = q 一直往下找才找到一个 item != null 的
+                    // 通过上面的 casItem(item, null), 表明 p 节点的 item 已经是 null 了
+                    // 如果 p.next 不为 null, 则表明 p 后面还有节点, 则更新 h 为后面的节点 q
+                    // 如果 p.next == null , 则表明 p 是最后一个节点, 则更新 p 为 h , 此时 p 是 dummy 节点
+                    // 执行 updateHead 相当于删除了 p 或 q 前面那些无效节点
                     if (p != h) // hop two nodes at a time
                         updateHead(h, ((q = p.next) != null) ? q : p);
+                    // 上面的casItem()成功，就可以返回出队的元素了
                     return item;
                 }
+                //能下来证明当前这个p.item 是 null 的, 这个节点已经是失效节点了
+                //如果 p.next 是 null, 表明 p 和 p 前面的节点全部的 item 都为 null, 也就是 queue 是空的, 且 p 是最后一个节点了
                 else if ((q = p.next) == null) {
+                    //更新 head 为 p, 也就是相当于删除了 p 前面失效未删除的节点
                     updateHead(h, p);
+                    //没有有效的节点, 直接返回 null
                     return null;
                 }
+                // 如果p等于p的next，说明p已经出队了，重试
                 else if (p == q)
                     continue restartFromHead;
                 else
+                    // 将p设置为p的next, 也就是往下找
                     p = q;
             }
         }
@@ -381,21 +456,28 @@ public class ConcurrentLinkedQueue<E> extends AbstractQueue<E>
     public E peek() {
         restartFromHead:
         for (;;) {
+            //遍历
             for (Node<E> h = head, p = h, q;;) {
                 E item = p.item;
+                //找到第一个 item 不为 null 或者最后一个节点
                 if (item != null || (q = p.next) == null) {
+                    //更新 head
                     updateHead(h, p);
+                    //返回
                     return item;
                 }
+                //如果 p 已经被删除, 则在最外层重来
                 else if (p == q)
                     continue restartFromHead;
                 else
+                    //下一个节点
                     p = q;
             }
         }
     }
 
     /**
+     * 获取第一个 item 不为 null 的节点或最后一个 dummy 节点
      * Returns the first live (non-deleted) node on list, or null if none.
      * This is yet another variant of poll/peek; here returning the
      * first node, not element.  We could make peek() a wrapper around
@@ -406,15 +488,25 @@ public class ConcurrentLinkedQueue<E> extends AbstractQueue<E>
     Node<E> first() {
         restartFromHead:
         for (;;) {
+            //从 head 开始遍历
             for (Node<E> h = head, p = h, q;;) {
+                //p 是否有 item
                 boolean hasItem = (p.item != null);
+                //如果 hasItem 为 true 则表明找到了 , 则更新 head
+                //如果 hasItem 为 false 且 p.next 为 null, p 已经没有后继节点了,  也更新 head, 相当于找不到了, 直接返回 null
                 if (hasItem || (q = p.next) == null) {
+                    //重置 head 的要求
+                    //1. 第一个有值的节点
+                    //2. 最后一个没有值的节点(dummy 节点)
                     updateHead(h, p);
+                    //有值就返回, 没
                     return hasItem ? p : null;
                 }
+                //p 已经被删除, 则重来
                 else if (p == q)
                     continue restartFromHead;
                 else
+                    //取一个节点
                     p = q;
             }
         }
@@ -426,6 +518,7 @@ public class ConcurrentLinkedQueue<E> extends AbstractQueue<E>
      * @return {@code true} if this queue contains no elements
      */
     public boolean isEmpty() {
+        //能找到 item 不为 null 的节点
         return first() == null;
     }
 
@@ -447,6 +540,7 @@ public class ConcurrentLinkedQueue<E> extends AbstractQueue<E>
      */
     public int size() {
         int count = 0;
+        //遍历链表, 统计 item 不为 null 的节点数
         for (Node<E> p = first(); p != null; p = succ(p))
             if (p.item != null)
                 // Collection.size() spec says to max out
@@ -464,9 +558,12 @@ public class ConcurrentLinkedQueue<E> extends AbstractQueue<E>
      * @return {@code true} if this queue contains the specified element
      */
     public boolean contains(Object o) {
+        //对象是 null , 则返回 null
         if (o == null) return false;
+        //遍历
         for (Node<E> p = first(); p != null; p = succ(p)) {
             E item = p.item;
+            //找到item 相等的
             if (item != null && o.equals(item))
                 return true;
         }
@@ -485,18 +582,30 @@ public class ConcurrentLinkedQueue<E> extends AbstractQueue<E>
      * @return {@code true} if this queue changed as a result of the call
      */
     public boolean remove(Object o) {
+        //如果要删除的值是null, 则返回 false
         if (o == null) return false;
         Node<E> pred = null;
+        //从第一个有值的节点往下遍历
         for (Node<E> p = first(); p != null; p = succ(p)) {
+            //能执行循环体则表示 p 肯定不为 null, 并且 p 就是 head
             E item = p.item;
+            //遇到对象相等, 并且能替换成 item 为 null
             if (item != null &&
                 o.equals(item) &&
                 p.casItem(item, null)) {
+                //获取下一个节点
                 Node<E> next = succ(p);
+                //这里有个疑问, next 有没可能是 head 呢? 有可能, 不过, 新的 head 肯定是在当前 p 的后面,
+                // todo wolfleong 如果 p 被删除了, 那么 pred 存在的话算什么情况 ?
+                //  个人觉得 pred 肯定也是被删除了, 那么执行不执行 pred.casNext 已经没有意义了
+
+                //如果前一个节点 pred 存在, 且下一个节点 next 存在, 则立即删除掉当前的 p, 否则先当无效节点留着
                 if (pred != null && next != null)
                     pred.casNext(p, next);
+                //返回删除成功
                 return true;
             }
+            //没找到对应的 item 或没 cas 成功, 记录节点 p 到 pred
             pred = p;
         }
         return false;
