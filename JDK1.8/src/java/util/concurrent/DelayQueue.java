@@ -63,6 +63,13 @@ import java.util.*;
  * <a href="{@docRoot}/../technotes/guides/collections/index.html">
  * Java Collections Framework</a>.
  *
+ * DelayQueue是java并发包下的延时阻塞队列，常用于实现定时任务。
+ *
+ * （1）DelayQueue是阻塞队列；
+ * （2）DelayQueue内部存储结构使用优先级队列；
+ * （3）DelayQueue使用重入锁和条件来控制并发安全；
+ * （4）DelayQueue常用于定时任务；
+ *
  * @since 1.5
  * @author Doug Lea
  * @param <E> the type of elements held in this collection
@@ -70,10 +77,17 @@ import java.util.*;
 public class DelayQueue<E extends Delayed> extends AbstractQueue<E>
     implements BlockingQueue<E> {
 
+    /**
+     * 用于控制并发的锁
+     */
     private final transient ReentrantLock lock = new ReentrantLock();
+    /**
+     * 优先级队列
+     */
     private final PriorityQueue<E> q = new PriorityQueue<E>();
 
     /**
+     * 用于标记当前是否有线程在排队（仅用于取元素时）
      * Thread designated to wait for the element at the head of
      * the queue.  This variant of the Leader-Follower pattern
      * (http://www.cs.wustl.edu/~schmidt/POSA/POSA2/) serves to
@@ -92,6 +106,7 @@ public class DelayQueue<E extends Delayed> extends AbstractQueue<E>
     private Thread leader = null;
 
     /**
+     * 条件，用于表示现在是否有可取的元素
      * Condition signalled when a newer element becomes available
      * at the head of the queue or a new thread may need to
      * become leader.
@@ -135,15 +150,19 @@ public class DelayQueue<E extends Delayed> extends AbstractQueue<E>
      */
     public boolean offer(E e) {
         final ReentrantLock lock = this.lock;
+        //加锁
         lock.lock();
         try {
+            //添加元素到优先级队列中；
             q.offer(e);
+            //如果添加的元素是堆顶元素，就把leader置为空，并唤醒等待在条件available上的线程；
             if (q.peek() == e) {
                 leader = null;
                 available.signal();
             }
             return true;
         } finally {
+            //解锁；
             lock.unlock();
         }
     }
@@ -206,22 +225,38 @@ public class DelayQueue<E extends Delayed> extends AbstractQueue<E>
         lock.lockInterruptibly();
         try {
             for (;;) {
+                // 堆顶元素
                 E first = q.peek();
+                // 如果堆顶元素为空，说明队列中还没有元素，直接阻塞等待
                 if (first == null)
                     available.await();
                 else {
+                    // 堆顶元素的到期时间
                     long delay = first.getDelay(NANOSECONDS);
+                    // 如果小于0说明已到期，直接调用poll()方法弹出堆顶元素
                     if (delay <= 0)
                         return q.poll();
+                    // 如果delay大于0 ，则下面要阻塞了
+                    // 将first置为空方便gc，因为有可能其它元素弹出了这个元素
+                    // 这里还持有着引用不会被清理
                     first = null; // don't retain ref while waiting
+                    // 如果前面有其它线程在等待，直接进入等待
                     if (leader != null)
                         available.await();
                     else {
+                        // 如果leader为null，把当前线程赋值给它
                         Thread thisThread = Thread.currentThread();
                         leader = thisThread;
                         try {
+                            // 等待delay时间后自动醒过来
+                            // 醒过来后把leader置空并重新进入循环判断堆顶元素是否到期
+                            // 这里即使醒过来后也不一定能获取到元素
+                            // 因为有可能其它线程先一步获取了锁并弹出了堆顶元素
+                            // 条件锁的唤醒分成两步，先从Condition的队列里出队
+                            // 再入队到AQS的队列中，当其它线程调用LockSupport.unpark(t)的时候才会真正唤醒
                             available.awaitNanos(delay);
                         } finally {
+                            // 如果leader还是当前线程就把它置为空，让其它线程有机会获取元素
                             if (leader == thisThread)
                                 leader = null;
                         }
@@ -229,8 +264,10 @@ public class DelayQueue<E extends Delayed> extends AbstractQueue<E>
                 }
             }
         } finally {
+            // 成功出队后，如果leader为空且堆顶还有元素，就唤醒下一个等待的线程
             if (leader == null && q.peek() != null)
                 available.signal();
+            // 解锁，这才是真正的唤醒
             lock.unlock();
         }
     }

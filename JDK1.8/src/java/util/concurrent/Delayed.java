@@ -43,12 +43,15 @@ package java.util.concurrent;
  * {@code compareTo} method that provides an ordering consistent with
  * its {@code getDelay} method.
  *
+ * Delayed是一个继承自Comparable的接口
+ *
  * @since 1.5
  * @author Doug Lea
  */
 public interface Delayed extends Comparable<Delayed> {
 
     /**
+     * 表示还有多少时间到期，到期了应返回小于等于0的数值。
      * Returns the remaining delay associated with this object, in the
      * given time unit.
      *
