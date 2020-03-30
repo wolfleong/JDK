@@ -70,6 +70,8 @@ import java.util.function.Consumer;
  * <a href="{@docRoot}/../technotes/guides/collections/index.html">
  * Java Collections Framework</a>.
  *
+ * LinkedBlockingDeque 实现原理跟 LinkedBlockingQueue 基本一致
+ *
  * @since 1.6
  * @author  Doug Lea
  * @param <E> the type of elements held in this collection

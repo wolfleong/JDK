@@ -84,6 +84,8 @@ import java.util.function.Consumer;
  * <a href="{@docRoot}/../technotes/guides/collections/index.html">
  * Java Collections Framework</a>.
  *
+ * ConcurrentLinkedDeque 实现原理跟 ConcurrentLinkedQueue 的基本一致
+ *
  * @since 1.7
  * @author Doug Lea
  * @author Martin Buchholz

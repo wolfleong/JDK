@@ -193,6 +193,8 @@ import java.util.*;
  * <a href="{@docRoot}/../technotes/guides/collections/index.html">
  * Java Collections Framework</a>.
  *
+ * 阻塞的双端队列
+ *
  * @since 1.6
  * @author Doug Lea
  * @param <E> the type of elements held in this collection
