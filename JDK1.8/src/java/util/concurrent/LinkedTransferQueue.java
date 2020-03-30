@@ -81,6 +81,29 @@ import java.util.function.Consumer;
  * <a href="{@docRoot}/../technotes/guides/collections/index.html">
  * Java Collections Framework</a>.
  *
+ * LinkedTransferQueue是LinkedBlockingQueue、SynchronousQueue（公平模式）、ConcurrentLinkedQueue三者的集合体，
+ * 它综合了这三者的方法，并且提供了更加高效的实现方式。
+ *
+ * LinkedTransferQueue使用了松弛型双重队列，双重的意思可以理解为两种类型的节点.
+ * 在双重队列中为了减少CAS的开销，加入了Slack（松弛度）的处理方式，在节点被匹配（被删除）之后，不会立即更新 head/tail，
+ * 而是当 head/tail 节点和最近一个未匹配的节点之间的距离超过一个阈值之后才会更新，在LinkedTransferQueue中松弛度值设置为2，
+ * 这是一个经验值，不多深究。同时为了避免匹配节点在队列中的堆积，在CAS更新head时，会把已匹配的head的next引用指向自己。
+ * 当我们进行遍历时，遇到这种节点，表示当前线程已经落后于其他线程，需要重新获取head来进行遍历
+ *
+ * （1）LinkedTransferQueue 可以看作LinkedBlockingQueue、SynchronousQueue（公平模式）、ConcurrentLinkedQueue三者的集合体；
+ * （2）LinkedTransferQueue的实现方式是使用一种叫做双重队列的数据结构；
+ * （3）不管是取元素还是放元素都会入队；
+ * （4）先尝试跟头节点比较，如果二者模式不一样，就匹配它们，组成CP，然后返回对方的值；
+ * （5）如果二者模式一样，就入队，并自旋或阻塞等待被唤醒；
+ * （6）至于是否入队及阻塞有四种模式，NOW、ASYNC、SYNC、TIMED；
+ * （7）LinkedTransferQueue全程都没有使用synchronized、重入锁等比较重的锁，基本是通过 自旋+CAS 实现；
+ * （8）对于入队之后，先自旋一定次数后再调用LockSupport.park()或LockSupport.parkNanos阻塞；
+ *
+ * SynchronousQueue 与 LinkedTransferQueue 区别 ?
+ *  1. SynchronousQueue 无论 put 还是 take , 只要没有匹配的节点都会阻塞,
+ *     LinkedTransferQueue 的 put , 不会阻塞, 没有匹配节点则异步添加到队列中, take 如果没匹配节点会阻塞, poll 会立刻返回
+ *  2. SynchronousQueue 没有容量, LinkedTransferQueue 有容量
+ *
  * @since 1.7
  * @author Doug Lea
  * @param <E> the type of elements held in this collection

@@ -98,10 +98,12 @@ import java.util.function.Consumer;
  * <a href="{@docRoot}/../technotes/guides/collections/index.html">
  * Java Collections Framework</a>.
  *
- * ConcurrentLinkedQueue只实现了Queue接口，并没有实现BlockingQueue接口，所以它不是阻塞队列，也不能用于线程池中，但是它是线程安全的，可用于多线程环境中。
+ * ConcurrentLinkedQueue只实现了Queue接口，并没有实现BlockingQueue接口，所以它不是阻塞队列，也不能用于线程池中，
+ * 但是它是线程安全的，可用于多线程环境中, 无界队列。
  * （1）ConcurrentLinkedQueue不是阻塞队列；
  * （2）ConcurrentLinkedQueue不能用在线程池中；
  * （3）ConcurrentLinkedQueue使用（CAS+自旋）更新头尾节点控制出队入队操作；
+ *
  *
  * ConcurrentLinkedQueue与LinkedBlockingQueue对比？
  *
