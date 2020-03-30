@@ -122,12 +122,16 @@ package java.util.concurrent;
  * <a href="package-summary.html#MemoryVisibility"><i>happen-before</i></a>
  * its execution begins, perhaps in another thread.
  *
+ * 执行器接口, 它提供一种将任务提交与任务运行解耦分离方式
+ * - 不同于 java.lang.Thread 类将任务和执行耦合在一起， Executor 将任务本身和执行任务分离
+ *
  * @since 1.5
  * @author Doug Lea
  */
 public interface Executor {
 
     /**
+     * 执行方法, 可以执行一个 Runnable
      * Executes the given command at some time in the future.  The command
      * may execute in a new thread, in a pooled thread, or in the calling
      * thread, at the discretion of the {@code Executor} implementation.

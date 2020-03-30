@@ -57,9 +57,13 @@ package java.util.concurrent;
  * <a href="package-summary.html#MemoryVisibility"><i>happen-before</i></a>
  * actions taken by that task, which in turn <i>happen-before</i>
  * actions following a successful return from the corresponding {@code take()}.
+ *
+ * CompletionService 将异步任务创建与已完成任务的结果分离开来的服务。
+ * 生产者通过 submit 提交任务, 消费者通过 take 获取已经完成的任务
  */
 public interface CompletionService<V> {
     /**
+     * 提交Callable类型的task
      * Submits a value-returning task for execution and returns a Future
      * representing the pending results of the task.  Upon completion,
      * this task may be taken or polled.
@@ -73,6 +77,7 @@ public interface CompletionService<V> {
     Future<V> submit(Callable<V> task);
 
     /**
+     * 提交Runnable类型的task
      * Submits a Runnable task for execution and returns a Future
      * representing that task.  Upon completion, this task may be
      * taken or polled.
@@ -89,6 +94,7 @@ public interface CompletionService<V> {
     Future<V> submit(Runnable task, V result);
 
     /**
+     * 获取并移除已完成状态的task，如果目前不存在这样的task，则等待
      * Retrieves and removes the Future representing the next
      * completed task, waiting if none are yet present.
      *
@@ -98,6 +104,7 @@ public interface CompletionService<V> {
     Future<V> take() throws InterruptedException;
 
     /**
+     * 获取并移除已完成状态的task，如果目前不存在这样的task，返回null
      * Retrieves and removes the Future representing the next
      * completed task, or {@code null} if none are present.
      *
@@ -107,6 +114,7 @@ public interface CompletionService<V> {
     Future<V> poll();
 
     /**
+     * 获取并移除已完成状态的task，如果在指定等待时间内不存在这样的task，返回null
      * Retrieves and removes the Future representing the next
      * completed task, waiting if necessary up to the specified wait
      * time if none are yet present.

@@ -49,6 +49,8 @@ package java.util.concurrent;
  * <p>The {@link Executors} class contains utility methods to
  * convert from other common forms to {@code Callable} classes.
  *
+ * Callable 与 Runnable 的区别是, Callable 有返回值的
+ *
  * @see Executor
  * @since 1.5
  * @author Doug Lea

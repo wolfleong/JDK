@@ -131,12 +131,15 @@ import java.util.Collection;
  * any actions taken by that task, which in turn <i>happen-before</i> the
  * result is retrieved via {@code Future.get()}.
  *
+ * ExecutorService 接口 对 Executor 接口进行了扩展，提供了返回 Future 对象，终止，关闭线程池等方法
+ *
  * @since 1.5
  * @author Doug Lea
  */
 public interface ExecutorService extends Executor {
 
     /**
+     * 关闭线程池，已提交的任务继续执行，不接受继续提交新任务
      * Initiates an orderly shutdown in which previously submitted
      * tasks are executed, but no new tasks will be accepted.
      * Invocation has no additional effect if already shut down.
@@ -156,6 +159,7 @@ public interface ExecutorService extends Executor {
     void shutdown();
 
     /**
+     * 关闭线程池，尝试停止正在执行的所有任务，不接受继续提交新任务, 它和前面的方法相比，加了一个单词“now”，区别在于它会去停止当前正在进行的任务
      * Attempts to stop all actively executing tasks, halts the
      * processing of waiting tasks, and returns a list of the tasks
      * that were awaiting execution.
@@ -181,6 +185,7 @@ public interface ExecutorService extends Executor {
     List<Runnable> shutdownNow();
 
     /**
+     * 线程池是否已关闭
      * Returns {@code true} if this executor has been shut down.
      *
      * @return {@code true} if this executor has been shut down
@@ -188,6 +193,7 @@ public interface ExecutorService extends Executor {
     boolean isShutdown();
 
     /**
+     * 如果调用了 shutdown() 或 shutdownNow() 方法后，所有任务结束了，那么返回true
      * Returns {@code true} if all tasks have completed following shut down.
      * Note that {@code isTerminated} is never {@code true} unless
      * either {@code shutdown} or {@code shutdownNow} was called first.
@@ -197,6 +203,10 @@ public interface ExecutorService extends Executor {
     boolean isTerminated();
 
     /**
+     * // 等待所有任务完成，并设置超时时间
+     * // 我们这么理解，实际应用中是，先调用 shutdown 或 shutdownNow，
+     * // 然后再调这个方法等待所有的线程真正地完成，返回值意味着有没有超时
+     *
      * Blocks until all tasks have completed execution after a shutdown
      * request, or the timeout occurs, or the current thread is
      * interrupted, whichever happens first.
@@ -211,6 +221,7 @@ public interface ExecutorService extends Executor {
         throws InterruptedException;
 
     /**
+     * 提交一个 Callable 任务
      * Submits a value-returning task for execution and returns a
      * Future representing the pending results of the task. The
      * Future's {@code get} method will return the task's result upon
@@ -236,6 +247,8 @@ public interface ExecutorService extends Executor {
     <T> Future<T> submit(Callable<T> task);
 
     /**
+     * // 提交一个 Runnable 任务，第二个参数将会放到 Future 中，作为返回值，
+     * // 因为 Runnable 的 run 方法本身并不返回任何东西
      * Submits a Runnable task for execution and returns a Future
      * representing that task. The Future's {@code get} method will
      * return the given result upon successful completion.
@@ -251,6 +264,7 @@ public interface ExecutorService extends Executor {
     <T> Future<T> submit(Runnable task, T result);
 
     /**
+     * 提交一个 Runnable 任务, Future
      * Submits a Runnable task for execution and returns a Future
      * representing that task. The Future's {@code get} method will
      * return {@code null} upon <em>successful</em> completion.
@@ -264,6 +278,7 @@ public interface ExecutorService extends Executor {
     Future<?> submit(Runnable task);
 
     /**
+     * 执行所有任务，返回 Future 类型的一个 list
      * Executes the given tasks, returning a list of Futures holding
      * their status and results when all complete.
      * {@link Future#isDone} is {@code true} for each
@@ -288,6 +303,7 @@ public interface ExecutorService extends Executor {
         throws InterruptedException;
 
     /**
+     * 也是执行所有任务，但是这里设置了超时时间
      * Executes the given tasks, returning a list of Futures holding
      * their status and results
      * when all complete or the timeout expires, whichever happens first.
@@ -320,6 +336,7 @@ public interface ExecutorService extends Executor {
         throws InterruptedException;
 
     /**
+     * 只有其中的一个任务结束了，就可以返回，返回执行完的那个任务的结果
      * Executes the given tasks, returning the result
      * of one that has completed successfully (i.e., without throwing
      * an exception), if any do. Upon normal or exceptional return,
@@ -342,6 +359,8 @@ public interface ExecutorService extends Executor {
         throws InterruptedException, ExecutionException;
 
     /**
+     * // 同上一个方法，只有其中的一个任务结束了，就可以返回，返回执行完的那个任务的结果，
+     * // 不过这个带超时，超过指定的时间，抛出 TimeoutException 异常
      * Executes the given tasks, returning the result
      * of one that has completed successfully (i.e., without throwing
      * an exception), if any do before the given timeout elapses.

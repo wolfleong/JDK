@@ -76,7 +76,7 @@ import java.util.function.Consumer;
  * LinkedBlockingQueue是java并发包下一个以单链表实现的阻塞队列，它是线程安全的.
  * （1）LinkedBlockingQueue采用单链表的形式实现；
  * （2）LinkedBlockingQueue采用两把锁的锁分离技术实现入队出队互不阻塞；
- * （3）LinkedBlockingQueue是有界队列，不传入容量时默认为最大int值；
+ * （3）LinkedBlockingQueue是有界队列，不传入容量时默认为 Integer 的最大值；
  *
  * LinkedBlockingQueue与ArrayBlockingQueue对比？
  *  a）后者入队出队采用一把锁，导致入队出队相互阻塞，效率低下；
