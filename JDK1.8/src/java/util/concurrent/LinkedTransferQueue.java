@@ -410,11 +410,13 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
      * self-linked.
      */
 
+    //如果机器为多处理器则为true,MP为multiprocessor缩写
     /** True if on multiprocessor */
     private static final boolean MP =
         Runtime.getRuntime().availableProcessors() > 1;
 
     /**
+     * 节点自旋等待的次数 128
      * The number of times to spin (with randomly interspersed calls
      * to Thread.yield) on multiprocessor before blocking when a node
      * is apparently the first waiter in the queue.  See above for
@@ -425,6 +427,7 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
     private static final int FRONT_SPINS   = 1 << 7;
 
     /**
+     * 前驱节点正在处理，当前节点需要自旋的次数, FRONT_SPINS >>> 1 = 64
      * The number of times to spin before blocking when a node is
      * preceded by another node that is apparently spinning.  Also
      * serves as an increment to FRONT_SPINS on phase changes, and as
@@ -434,6 +437,7 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
     private static final int CHAINED_SPINS = FRONT_SPINS >>> 1;
 
     /**
+     * sweepVotes的阈值，达到这个阈值上限则进行一次清理操作
      * The maximum number of estimated removal failures (sweepVotes)
      * to tolerate before sweeping through the queue unlinking
      * cancelled nodes that were not unlinked upon initial
@@ -443,15 +447,28 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
     static final int SWEEP_THRESHOLD = 32;
 
     /**
+     * 单向链表节点
      * Queue nodes. Uses Object, not E, for items to allow forgetting
      * them after use.  Relies heavily on Unsafe mechanics to minimize
      * unnecessary ordering constraints: Writes that are intrinsically
      * ordered wrt other accesses or CASes use simple relaxed forms.
      */
     static final class Node {
+        /**
+         * 数据节点和请求节点类型区分标识
+         */
         final boolean isData;   // false if this is a request node
+        /**
+         * 数据节点保存数据，请求节点为null
+         */
         volatile Object item;   // initially non-null if isData; CASed to match
+        /**
+         * 指向队列中下一个节点
+         */
         volatile Node next;
+        /**
+         * 当前节点对应的等待线程
+         */
         volatile Thread waiter; // null until waiting
 
         // CAS methods for fields
@@ -465,6 +482,7 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
         }
 
         /**
+         * 构造方法
          * Constructs a new node.  Uses relaxed write because item can
          * only be seen after publication via casNext.
          */
@@ -474,6 +492,7 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
         }
 
         /**
+         * 将next指向自己，避免无用Node过长影响垃圾回收, 在cas更新head后调用
          * Links node to itself to avoid garbage retention.  Called
          * only after CASing head field, so uses relaxed write.
          */
@@ -482,6 +501,7 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
         }
 
         /**
+         * 匹配或者节点被取消的时候被调用，设置item指向自己，waiter为null
          * Sets item to self and waiter to null, to avoid garbage
          * retention after matching or cancelling. Uses relaxed writes
          * because order is already constrained in the only calling
@@ -496,15 +516,23 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
         }
 
         /**
+         * 如果此节点已匹配或者是被取消匹配的节点，则返回true
          * Returns true if this node has been matched, including the
          * case of artificial matches due to cancellation.
          */
         final boolean isMatched() {
             Object x = item;
+            //x == this 调用了forgetContents, 或者是被取消了
+            // x == null 相当于 !(x != null), 也就是相当于 !isData , !isData 表示最原始的 isData 取反
+            //(x == null) == isData 表示请求节点匹配了数据节点（请求节点的item更新为数据节点的数据）
+            // 或者数据节点匹配了请求节点（数据节点的item更新为null）
             return (x == this) || ((x == null) == isData);
         }
 
         /**
+         * 当前节点是否是未匹配的请求(take)节点
+         *  - !isData 请求节点, 也就是非数据节点
+         *  - item == null 代表没被匹配
          * Returns true if this is an unmatched request node.
          */
         final boolean isUnmatchedRequest() {
@@ -512,6 +540,7 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
         }
 
         /**
+         * 能否将指定的节点node（haveData类型）追加到当前节点后。如果node节点属性与当前节点相反，且当前节点还未进行匹配则不能追加
          * Returns true if a node with the given mode cannot be
          * appended to this node because this node is unmatched and
          * has opposite data mode.
@@ -519,19 +548,31 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
         final boolean cannotPrecede(boolean haveData) {
             boolean d = isData;
             Object x;
+            //d != haveData 表示类型匹配
+            // (x = item) != this 没有被取消且没有被匹配
+            // (x != null) == d 表示还没有被匹配, x != null 表示最原始的 isData, d 表示现在的 isData,
+            // 如果被匹配上, 最原始的 isData 肯定不等现在的 isData
             return d != haveData && (x = item) != this && (x != null) == d;
         }
 
         /**
+         * 尝试人为匹配数据节点，匹配成功返回true，设置item为null(不用再匹配了) , 相当于移除当前数据节点，用在remove方法中
          * Tries to artificially match a data node -- used by remove.
          */
         final boolean tryMatchData() {
             // assert isData;
+            //this 是个数据节点, item 肯定不为 null
             Object x = item;
+            // x != null 表示数据节点
+            // x != this 表示还没被匹配或没被取消
+            // casItem(x, null) , cas 进行匹配
             if (x != null && x != this && casItem(x, null)) {
+                //如果匹配成功, 则唤醒当前挂起的线程
                 LockSupport.unpark(waiter);
+                //return true
                 return true;
             }
+            //默认没匹配上
             return false;
         }
 
@@ -558,12 +599,15 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
         }
     }
 
+    // 头节点
     /** head of the queue; null until first enqueue */
     transient volatile Node head;
 
+    // 尾节点
     /** tail of the queue; null until first append */
     private transient volatile Node tail;
 
+    //解除删除节点关联失败的次数
     /** The number of apparent failures to unsplice removed nodes */
     private transient volatile int sweepVotes;
 
@@ -583,9 +627,14 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
     /*
      * Possible values for "how" argument in xfer method.
      */
+    // xfer方法how参数可能的取值类型, 队列操作统一方法根据类型进行不同的处理
+    // 立即返回，用于非超时的poll()和tryTransfer()方法中
     private static final int NOW   = 0; // for untimed poll, tryTransfer
+    // 异步，不会阻塞，用于放元素时，因为内部使用无界单链表存储元素，不会阻塞放元素的过程
     private static final int ASYNC = 1; // for offer, put, add
+    // 同步，调用的时候如果没有匹配到会阻塞直到匹配到为止
     private static final int SYNC  = 2; // for transfer, take
+    // 超时，用于有超时的poll()和tryTransfer()方法中
     private static final int TIMED = 3; // for timed poll, tryTransfer
 
     @SuppressWarnings("unchecked")
@@ -595,6 +644,9 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
     }
 
     /**
+     * LinkedTransferQueue核心方法，所有的操作最终都通过xfer实现，通过how参数的不同进行不同的处理，
+     * 在匹配上时判断当前head的slack阈值，如果达到上限则进行head更新
+     *
      * Implements all queuing methods. See above for explanation.
      *
      * @param e the item or null for take
@@ -605,44 +657,103 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
      * @throws NullPointerException if haveData mode but e is null
      */
     private E xfer(E e, boolean haveData, int how, long nanos) {
+        //e 数据节点（e非空）或者请求节点（e为null）
+        //haveData 数据节点为true，请求节点为false
+        //how NOW, ASYNC, SYNC, or TIMED  4种类型，上面已经介绍过
+        //nanos TIMED模式下设置的超时时间
+        //@return 节点匹配上则返回对应的匹配项否则传入的参数e
+
+        // 如果是数据节点则数据不能为 null
         if (haveData && (e == null))
             throw new NullPointerException();
+        //如果需要的话, 缓存待新增的节点
         Node s = null;                        // the node to append, if needed
 
+        // 外层循环，自旋，失败就重试
         retry:
         for (;;) {                            // restart on append race
-
+            //从 head 开始遍历尝试匹配, 如果 head 为 null 则不进入 for 循环体, 则直接往下走
             for (Node h = head, p = h; p != null;) { // find & match first node
+                // p 节点的节点类型
                 boolean isData = p.isData;
+                // 获取数据
                 Object item = p.item;
+                // item != p 表示当前节点没有取消或者没有被匹配上, 因为匹配上也会设置 item = this 的
+                //(item != null) == isData 表示 p 是一个还未匹配的节点
+                // item != null 相当于最原始的 isData, 这里可以理解成最原始的 isData 和现在的 isData 进行对比, 相等就是没匹配
                 if (item != p && (item != null) == isData) { // unmatched
+                    // 相同节点类型，说明和队列中所有节点相同类型，无需匹配，跳出这个循环根据类型继续接下来的操作
                     if (isData == haveData)   // can't match
                         break;
+
+                    //执行到这说明p节点还未匹配上且与当前节点是相异类型，cas更新item成功则表示匹配上了
+                    // 注意这里只更新了head指向的节点，因为本次线程的e节点到这里还未入队
+                    // 这里将p的item指向为对应操作的节点e，表示p对应的节点已经与此次的e匹配上了
+                    // 如果未更新成功，说明p已经被其他人匹配上，执行后面逻辑继续循环
                     if (p.casItem(item, e)) { // match
+                        //进来, 表示 p 已经被匹配上了
+
+                        // 如果 p 当前已经不是指向 h 了，说明p已经被循环 next 更新过了, 也就是: h -> q -> n 或 h -> a -> b -> q -> n
                         for (Node q = p; q != h;) {
+                            //获取 p 的下一个节点
                             Node n = q.next;  // update by 2 unless singleton
+
+                            // head == h 表示别的线程没有更改 head 节点的位置
+                            //如果别的线程没有更改 head 的位置, 则尝试推进 head 节点
+                            // 如果 n == null, 则表示 q 是链表的最后一个节点, 直接用q 做 head, 否则用 n 作为 head
+                            // 松弛度等于2则更新head，h->q->n
                             if (head == h && casHead(h, n == null ? q : n)) {
+                                //替换成功, 将h的next更新方便回收
                                 h.forgetNext();
+                                //退出循环
                                 break;
                             }                 // advance and retry
+
+                            //能跑下来表明, head 被别的线程更新了, 或 h 不是最新的 head
+
+                            //有其它线程更新了头节点，再次判断 slack<2。 h -> q 如果 q.isMatched() 则可以将 q.next 设置为头节点
+                            //更新 h 为最新的 head , 并且判断如果 head 为 null, 则 slack 为 0, 满足 slack<2 , 直接退出
+                            //更新 q 为 next, 并且判断如果 h.next(q) 为 null, 也就是链表只有 h, 如果 h 是未匹配的, 则 stack 为 0, 如果 h 是已匹配的, 则 stack 是 1,  满足 slack < 2 , 也退出
+
+                            //如果 head 不为 null, h.next(q) 也不为 null, 也就是 h -> q , 如果 q 是未匹配, 如果 h 是未匹配, 则 stack 是 0,
+                            // 如果 h 是匹配的, 则 stack 是 1, 满足 stack < 2 , 直接退出.
+                            // 相反, 如果q是已经匹配的, 则 h 肯定也是匹配的, 那么 stack 至少大于等于 2, 因为 q 后面可能还有已经匹配的节点, 所以不能直接退出
                             if ((h = head)   == null ||
                                 (q = h.next) == null || !q.isMatched())
                                 break;        // unless slack < 2
                         }
+                        //唤醒匹配节点的挂起线程
                         LockSupport.unpark(p.waiter);
+                        //返回数据对象
                         return LinkedTransferQueue.<E>cast(item);
                     }
                 }
+                //获取下一个节点
                 Node n = p.next;
                 p = (p != n) ? n : (h = head); // Use head if p offlist
             }
 
+            // 到这里肯定是队列中存储的节点类型和自己一样
+            // 或者队列中没有元素了
+            // 就入队（不管放元素还是取元素都得入队）
+            // 入队又分成四种情况：
+            // NOW，立即返回，没有匹配到立即返回，不做入队操作
+            // ASYNC，异步，元素入队但当前线程不会阻塞（相当于无界LinkedBlockingQueue的元素入队）
+            // SYNC，同步，元素入队后当前线程阻塞，等待被匹配到
+            // TIMED，有超时，元素入队后等待一段时间被匹配，时间到了还没匹配到就返回元素本身
+
+            // 如果不是立即返回
             if (how != NOW) {                 // No matches available
+                // 新建s节点
                 if (s == null)
                     s = new Node(e, haveData);
+                // 尝试添加节点s到队列尾部
                 Node pred = tryAppend(s, haveData);
+                // 入队失败, 表示可以匹配，重试
                 if (pred == null)
                     continue retry;           // lost race vs opposite mode
+                //执行到这里说明 pred 非 null，s添加到队列中了，pred代表的是s的前驱节点或者s本身
+                // 处理SYNC/TIMED模式
                 if (how != ASYNC)
                     return awaitMatch(s, pred, e, (how == TIMED), nanos);
             }
@@ -651,6 +762,7 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
     }
 
     /**
+     * 尝试在尾部入队
      * Tries to append node s as tail.
      *
      * @param s the node to append
@@ -660,32 +772,53 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
      * predecessor
      */
     private Node tryAppend(Node s, boolean haveData) {
+        //从 tail 开始遍历，尝试把 s 放到链表尾端
         for (Node t = tail, p = t;;) {        // move p to last node and append
             Node n, u;                        // temps for reads of next & tail
+            // 如果首尾都是null，说明链表中还没有元素, 则进行初始化
             if (p == null && (p = head) == null) {
+                // 队列为空时尝试更新头节点为s即可，失败重新循环处理
+                // 注意，这里插入第一个元素的时候tail指针并没有指向s
                 if (casHead(null, s))
                     return s;                 // initialize
             }
+            //节点s不能追加到p节点后。①p和s的模式不同且②p还未匹配
             else if (p.cannotPrecede(haveData))
+                //两者可以匹配则返回null进行标记处理
                 return null;                  // lost race vs opposite mode
+            //如果 p.next 不为 null, 则表示 p 不是尾节点, 可能是被其他线程更新导致的
             else if ((n = p.next) != null)    // not last; keep traversing
+                //如果 p == t , 表示当前的 t 是刚从 tail 获取的, tail 可能还没更新, 则只能往下遍历, 如果 n ==  p 的话, 表示 p 已经被删除, 则返回 null, 否则返回下一个节点 n
+                //如果 p != t, 则表示 p 已经经过 p = p.next 的往下遍历了, 也就是 p 已经走在 t 后面了, 那么用 t != (u = tail) 判断一下 tail 是否已经更新过了, 如果更新过, 则返回 t, 否则根据p 是否被删除来返回 n 或 null
                 p = p != t && t != (u = tail) ? (t = u) : // stale tail
                     (p != n) ? n : null;      // restart if off list
+            //到这里, 表示 p 为最后一个节点, 则尝试添加当前节点到链表后面, 如果添加不成功, 则表明有其他线程在添加
             else if (!p.casNext(null, s))
+                //更新p重新循环执行
                 p = p.next;                   // re-read on CAS failure
             else {
+                // 执行到这表明更新p的next为s成功
+                //如果 p == t , 则 p(t) -> s , 此时 s 是尾节点, t 到 s 的距离为 1, 则 stack = 1, 所以不用更新 tail
+                //如果 t != p, 整个节点关联为...-> t -> ... -> p -> s，t到s距离 >= 2 , 满足 stack >= 2, 要更新 tail
                 if (p != t) {                 // update if slack now >= 2
+                    //如果 tail == t, 则表明 tail 还没有被更新过, 则尝试用 casTail(t, s) 更新, 如果更新成功, 则退出循环
+                    //如果 tail != t 或 casTail(t, s) 更新失败, 表示其他线程已经更新过 tail 的位置, 则继续判断是否需要更新 tail
+                    //t.next.next != null , 则 t 到 s 的距离 >= 2, 满足 stack >= 2, 则需要重新更新 tail。
+                    // s != t ??? todo wolfleong s != t 不明白作用是什么?
                     while ((tail != t || !casTail(t, s)) &&
                            (t = tail)   != null &&
                            (s = t.next) != null && // advance and retry
                            (s = s.next) != null && s != t);
+                    //这里是不停循环地更新 tail 直到尾节点 , 而不是直接把 tail 指到尾节点
                 }
+                //添加成功, 返回
                 return p;
             }
         }
     }
 
     /**
+     * Spins(自旋)/yields(放弃cpu时间片)/blocks(阻塞) 直到s节点matched或canceled
      * Spins/yields/blocks until node s is matched or caller gives up.
      *
      * @param s the waiting node
@@ -698,66 +831,97 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
      * @return matched item, or e if unmatched on interrupt or timeout
      */
     private E awaitMatch(Node s, Node pred, E e, boolean timed, long nanos) {
+        //pred: s的前驱节点，如果没有前驱节点则为s自己
+        //s: 表示当前节点
+        //e: s节点的原始值
+        //timed: true时限时等待，false时无限等待
+
+        //计算超时时间
         final long deadline = timed ? System.nanoTime() + nanos : 0L;
+        //当前线程
         Thread w = Thread.currentThread();
+        //默认自旋次数为 -1
         int spins = -1; // initialized after first item and cancel checks
+        //用于控制 Thread.yield 概率的随机对象
         ThreadLocalRandom randomYields = null; // bound if needed
 
         for (;;) {
+            //获取 s 节点的值
             Object item = s.item;
+            //item已经被修改，说明匹配成功。返回匹配后的值
             if (item != e) {                  // matched
                 // assert item != s;
+                // 清除 s 的内容
                 s.forgetContents();           // avoid garbage
+                //返回匹配的值
                 return LinkedTransferQueue.<E>cast(item);
             }
+            //如果线程被中断或超时, 则将 s 设置成取消
             if ((w.isInterrupted() || (timed && nanos <= 0)) &&
                     s.casItem(e, s)) {        // cancel
+                //踢出 s
                 unsplice(pred, s);
                 return e;
             }
 
+            // 3. 设置自旋次数
             if (spins < 0) {                  // establish spins at/near front
+                //计算并设置, 如果 spins > 0 , 则获取 ThreadLocalRandom
                 if ((spins = spinsFor(pred, s.isData)) > 0)
                     randomYields = ThreadLocalRandom.current();
             }
+            //自旋，有很小的概率调用 yield
             else if (spins > 0) {             // spin
                 --spins;
+                //随机 yield
                 if (randomYields.nextInt(CHAINED_SPINS) == 0)
                     Thread.yield();           // occasionally yield
             }
+            //如果线程引用为 null
             else if (s.waiter == null) {
+                //设置当前线程
                 s.waiter = w;                 // request unpark then recheck
             }
+            //如果有设置时间, 则设置时间挂起
             else if (timed) {
                 nanos = deadline - System.nanoTime();
+                //没到超时时间, 则挂起
                 if (nanos > 0L)
                     LockSupport.parkNanos(this, nanos);
             }
             else {
+                //挂起, 直到被唤醒
                 LockSupport.park(this);
             }
         }
     }
 
     /**
+     * 通过pre节点计算自旋次数
      * Returns spin/yield value for a node with given predecessor and
      * data mode. See above for explanation.
      */
     private static int spinsFor(Node pred, boolean haveData) {
+        //如果是多核cpu 且 前一个节点不为 null
         if (MP && pred != null) {
+            //前驱和当前节点类型不同则自旋 FRONT_SPINS + CHAINED_SPINS ??? todo wolfleong 有机会出现这种情况吗?
             if (pred.isData != haveData)      // phase change
                 return FRONT_SPINS + CHAINED_SPINS;
+            // pre已经匹配了，那就可以少自旋一些
             if (pred.isMatched())             // probably at front
                 return FRONT_SPINS;
+            //pre节点在匹配中了，那可以再少自旋一点
             if (pred.waiter == null)          // pred apparently spinning
                 return CHAINED_SPINS;
         }
+        //单核CPU时不自旋
         return 0;
     }
 
     /* -------------- Traversal methods -------------- */
 
     /**
+     * 返回p的后继节点，如果p.next指向p(p节点已经离队)，则返回head头节点. 因为 head 节点肯定在离队节点后面
      * Returns the successor of p, or the head node if p.next has been
      * linked to self, which will only be true if traversing with a
      * stale pointer that is now off the list.
@@ -768,11 +932,14 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
     }
 
     /**
+     * 找到第一个未匹配节点，数据类型一致则返回节点，不一致则返回null
      * Returns the first unmatched node of the given mode, or null if
      * none.  Used by methods isEmpty, hasWaitingConsumer.
      */
     private Node firstOfMode(boolean isData) {
+        //遍历
         for (Node p = head; p != null; p = succ(p)) {
+            //如果找到未匹配节点
             if (!p.isMatched())
                 return (p.isData == isData) ? p : null;
         }
@@ -785,14 +952,19 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
      * self-linked before using.
      */
     final Node firstDataNode() {
+        // 从头开始进行循环判断
         for (Node p = head; p != null;) {
             Object item = p.item;
+            //如果是数据节点
             if (p.isData) {
+                //如果没有被取消也没有被匹配, 则返回
                 if (item != null && item != p)
                     return p;
             }
+            // 头节点未被匹配同时非数据节点则队列中此刻应该只有请求节点不需要再循环判断下去了
             else if (item == null)
                 break;
+            //如果节点被删除, 则下一个从 head 开始
             if (p == (p = p.next))
                 p = head;
         }
@@ -1046,6 +1218,8 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
     /* -------------- Removal methods -------------- */
 
     /**
+     * 前驱节点与已删除或者取消状态的s节点取消连接，将两个节点取消关联
+     * todo wolfleong 这个删除逻辑有点迷, 啥情况才需要 SWEEP 投票, 啥时候不需要
      * Unsplices (now or later) the given deleted/cancelled node with
      * the given predecessor.
      *
@@ -1054,6 +1228,10 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
      * @param s the node to be unspliced
      */
     final void unsplice(Node pred, Node s) {
+        //pred s的前驱节点或者为null或者为s自己（当s为头节点时）
+        //s 取消或删除的节点
+
+        // 清理s节点变量
         s.forgetContents(); // forget unneeded fields
         /*
          * See above for rationale. Briefly: if pred still points to
@@ -1062,30 +1240,50 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
          * nor s are head or offlist, add to sweepVotes, and if enough
          * votes have accumulated, sweep.
          */
+        // 确认 pred 的 next 指向 s 即两者之间还有关联才处理
+        // 如果 s 是头节点, 那么 pred 就等于 s, 这种情况没法删除
         if (pred != null && pred != s && pred.next == s) {
             Node n = s.next;
+            // s的next为空表示s为尾结点
+            // 如果 n == s 表示 s 已经被删除了
+            // s 没被删除且 cas 删除 s 成功且 pred 已经被匹配才会进入 if
             if (n == null ||
                 (n != s && pred.casNext(s, n) && pred.isMatched())) {
+                // 看是否是 head 或将要成为新的head，根据需要更新head指向第一个未匹配节点
                 for (;;) {               // check if at, or could be, head
                     Node h = head;
+                    // todo wolfleong 为什么 pred 是 h 或 s 是 h  就不需要投票 sweep 删除呢
                     if (h == pred || h == s || h == null)
                         return;          // at head or list empty
+                    // 头节点未被匹配则跳出循环
                     if (!h.isMatched())
                         break;
+                    // 到这说明h已经被匹配，需要更新head
                     Node hn = h.next;
+                    // 头节点后继节点为空，验证队列为空
                     if (hn == null)
                         return;          // now empty
+                    // 头节点后继节点非头节点并且尝试更新头节点为后继节点
                     if (hn != h && casHead(h, hn))
+                        //替换成功, 则清理原头节点
                         h.forgetNext();  // advance head
                 }
+                //上面没办法保证 n 完全脱离链表, 所以才需要下面进一步的操作
+
+                // 如果 pred 没有离队 且 s 也没有离队
                 if (pred.next != pred && s.next != s) { // recheck if offlist
+                    // 解除前后节点链接失败则统计阈值处理
+                    // 根据SWEEP_THRESHOLD阈值进行判断处理
                     for (;;) {           // sweep now if enough votes
                         int v = sweepVotes;
+                        // 小于阈值则尝试将阈值加1
                         if (v < SWEEP_THRESHOLD) {
                             if (casSweepVotes(v, v + 1))
                                 break;
                         }
+                        //如果 sweepVotes >= SWEEP_THRESHOLD
                         else if (casSweepVotes(v, 0)) {
+                            //通过sweep方法进行清理
                             sweep();
                             break;
                         }
@@ -1096,20 +1294,27 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
     }
 
     /**
+     * 从头节点开始遍历清理匹配节点（取消的节点）的节点关联关系
      * Unlinks matched (typically cancelled) nodes encountered in a
      * traversal from head.
      */
     private void sweep() {
+        // 从头节点开始，p开始为头节点，s为p的后继节点
         for (Node p = head, s, n; p != null && (s = p.next) != null; ) {
+            // s为未匹配的节点，开始遍历下一个
             if (!s.isMatched())
                 // Unmatched nodes are never self-linked
                 p = s;
+            // s已经被匹配了，如果s为尾节点，遍历完了，终止
             else if ((n = s.next) == null) // trailing node is pinned
                 break;
+            //s的next指向自己，说明s已经离队
             else if (s == n)    // stale
+                // 从头重新开始
                 // No need to also check for p == s, since that implies s == n
                 p = head;
             else
+                // 更新p的next
                 p.casNext(s, n);
         }
     }
@@ -1141,12 +1346,14 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
     }
 
     /**
+     * 默认构造器
      * Creates an initially empty {@code LinkedTransferQueue}.
      */
     public LinkedTransferQueue() {
     }
 
     /**
+     * 从集合中创建的构造器
      * Creates a {@code LinkedTransferQueue}
      * initially containing the elements of the given collection,
      * added in traversal order of the collection's iterator.
@@ -1167,6 +1374,8 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
      * @throws NullPointerException if the specified element is null
      */
     public void put(E e) {
+        // 异步模式，不会阻塞，不会超时
+        // 因为是放元素，单链表存储，会一直往后加
         xfer(e, true, ASYNC, 0);
     }
 
@@ -1221,6 +1430,7 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
      * @throws NullPointerException if the specified element is null
      */
     public boolean tryTransfer(E e) {
+        // 立刻尝试匹配返回，不进行任何等待操作，xfer源码部分有判断这个标识
         return xfer(e, true, NOW, 0) == null;
     }
 
@@ -1236,6 +1446,7 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
      * @throws NullPointerException if the specified element is null
      */
     public void transfer(E e) throws InterruptedException {
+        //由于中断操作导致失败会抛错
         if (xfer(e, true, SYNC, 0) != null) {
             Thread.interrupted(); // failure possible only due to interrupt
             throw new InterruptedException();
@@ -1258,6 +1469,7 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
      */
     public boolean tryTransfer(E e, long timeout, TimeUnit unit)
         throws InterruptedException {
+        // 尝试匹配未匹配等待超时时间才返回，如被中断则抛错
         if (xfer(e, true, TIMED, unit.toNanos(timeout)) == null)
             return true;
         if (!Thread.interrupted())
@@ -1266,6 +1478,7 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
     }
 
     public E take() throws InterruptedException {
+        // 同步模式，会阻塞直到取到元素
         E e = xfer(null, false, SYNC, 0);
         if (e != null)
             return e;
