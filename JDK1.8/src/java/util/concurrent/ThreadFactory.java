@@ -52,6 +52,9 @@ package java.util.concurrent;
  * The {@link Executors#defaultThreadFactory} method provides a more
  * useful simple implementation, that sets the created thread context
  * to known values before returning it.
+ *
+ * 线程工厂, 用于创建线程
+ *
  * @since 1.5
  * @author Doug Lea
  */

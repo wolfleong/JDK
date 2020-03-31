@@ -66,7 +66,7 @@ import java.util.*;
  * }}</pre>
  *
  * AbstractExecutorService 抽象类派生自 ExecutorService 接口，然后在其基础上实现了几个实用的方法，这些方法提供给子类进行调用。
- * - 这实现了如: submit、invokeAny、invokeAll 等方法
+ * - 这实现了通用的方法, 如: submit、invokeAny、invokeAll 等方法
  *
  * @since 1.5
  * @author Doug Lea
