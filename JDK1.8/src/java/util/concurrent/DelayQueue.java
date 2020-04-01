@@ -87,7 +87,7 @@ public class DelayQueue<E extends Delayed> extends AbstractQueue<E>
     private final PriorityQueue<E> q = new PriorityQueue<E>();
 
     /**
-     * 用于标记当前是否有线程在排队（仅用于取元素时）
+     * 用于标记当前是否有线程按队头元素的出队时间在排队等待（仅用于取元素时）
      * Thread designated to wait for the element at the head of
      * the queue.  This variant of the Leader-Follower pattern
      * (http://www.cs.wustl.edu/~schmidt/POSA/POSA2/) serves to

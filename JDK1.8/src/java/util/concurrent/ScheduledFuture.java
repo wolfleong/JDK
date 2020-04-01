@@ -40,6 +40,8 @@ package java.util.concurrent;
  * Usually a scheduled future is the result of scheduling
  * a task with a {@link ScheduledExecutorService}.
  *
+ * ScheduledFuture 接口继承 Future 和 Delayed 的混合接口
+ *
  * @since 1.5
  * @author Doug Lea
  * @param <V> The result type returned by this Future

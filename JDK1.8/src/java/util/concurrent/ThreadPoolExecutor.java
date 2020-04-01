@@ -990,6 +990,7 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
     }
 
     /**
+     * 如果是 RUNNING 则返回 true , 如果是 SHUTDOWN , 则看 shutdownOK
      * State check needed by ScheduledThreadPoolExecutor to
      * enable running tasks during shutdown.
      *
@@ -1927,6 +1928,7 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
     }
 
     /**
+     * 启动一个核心线程
      * Starts a core thread, causing it to idly wait for work. This
      * overrides the default policy of starting core threads only when
      * new tasks are executed. This method will return {@code false}
@@ -1940,18 +1942,25 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
     }
 
     /**
+     * 确保提前启动线程, 这个有点不一样的是, 如果核心线程为 0 , 那么保证至少要用一个线程执行任务
      * Same as prestartCoreThread except arranges that at least one
      * thread is started even if corePoolSize is 0.
      */
     void ensurePrestart() {
+        //获取线程数
         int wc = workerCountOf(ctl.get());
+        //如果线程数小于核心线程数
         if (wc < corePoolSize)
+            //创建核心线程
             addWorker(null, true);
+        //如果线程数为 0, 保证至少一个线程执行任务
         else if (wc == 0)
+            //创建一个非核心线程
             addWorker(null, false);
     }
 
     /**
+     * 提前启动所有核心线程
      * Starts all core threads, causing them to idly wait for work. This
      * overrides the default policy of starting core threads only when
      * new tasks are executed.
