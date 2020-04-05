@@ -71,6 +71,7 @@ import sun.security.util.SecurityConstants;
 public class Executors {
 
     /**
+     * 创建固定线程数的线程池
      * Creates a thread pool that reuses a fixed number of threads
      * operating off a shared unbounded queue.  At any point, at most
      * {@code nThreads} threads will be active processing tasks.

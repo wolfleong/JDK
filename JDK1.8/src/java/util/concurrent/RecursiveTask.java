@@ -62,6 +62,8 @@ package java.util.concurrent;
  * minimum granularity size (for example 10 here) for which you always
  * sequentially solve rather than subdividing.
  *
+ * RecursiveTask执行的任务有结果
+ *
  * @since 1.7
  * @author Doug Lea
  */
@@ -74,6 +76,7 @@ public abstract class RecursiveTask<V> extends ForkJoinTask<V> {
     V result;
 
     /**
+     * 抽象方法, 业务逻辑实现
      * The main computation performed by this task.
      * @return the result of the computation
      */

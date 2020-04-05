@@ -159,6 +159,8 @@ package java.util.concurrent;
  *   }
  * }}</pre>
  *
+ * RecursiveAction 表示执行的任务没有结果
+ *
  * @since 1.7
  * @author Doug Lea
  */
@@ -166,6 +168,7 @@ public abstract class RecursiveAction extends ForkJoinTask<Void> {
     private static final long serialVersionUID = 5232453952276485070L;
 
     /**
+     * 子类要实现的抽象方法
      * The main computation performed by this task.
      */
     protected abstract void compute();
