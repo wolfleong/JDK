@@ -157,6 +157,8 @@ import java.util.concurrent.TimeUnit;
  * shown that the interrupt occurred after another action may have unblocked
  * the thread. An implementation should document this behavior.
  *
+ * 锁接口
+ *
  * @see ReentrantLock
  * @see Condition
  * @see ReadWriteLock
@@ -167,6 +169,7 @@ import java.util.concurrent.TimeUnit;
 public interface Lock {
 
     /**
+     * 加锁
      * Acquires the lock.
      *
      * <p>If the lock is not available then the current thread becomes
@@ -184,6 +187,7 @@ public interface Lock {
     void lock();
 
     /**
+     * 可中断加锁
      * Acquires the lock unless the current thread is
      * {@linkplain Thread#interrupt interrupted}.
      *
@@ -232,6 +236,7 @@ public interface Lock {
     void lockInterruptibly() throws InterruptedException;
 
     /**
+     * 尝试获取锁
      * Acquires the lock only if it is free at the time of invocation.
      *
      * <p>Acquires the lock if it is available and returns immediately
@@ -261,6 +266,7 @@ public interface Lock {
     boolean tryLock();
 
     /**
+     * 尝试获取锁, 获取不到则等待一定时间
      * Acquires the lock if it is free within the given waiting time and the
      * current thread has not been {@linkplain Thread#interrupt interrupted}.
      *
@@ -321,6 +327,7 @@ public interface Lock {
     boolean tryLock(long time, TimeUnit unit) throws InterruptedException;
 
     /**
+     * 解锁
      * Releases the lock.
      *
      * <p><b>Implementation Considerations</b>
@@ -335,6 +342,7 @@ public interface Lock {
     void unlock();
 
     /**
+     * 创建 Condition
      * Returns a new {@link Condition} instance that is bound to this
      * {@code Lock} instance.
      *
