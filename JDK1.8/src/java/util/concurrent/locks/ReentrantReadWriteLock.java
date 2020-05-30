@@ -429,7 +429,7 @@ public class ReentrantReadWriteLock
                 setState(c + acquires);
                 return true;
             }
-            // 如果写锁获取不需要 block，那么进行 CAS，成功就代表获取到了写锁
+            // 如果写锁获取不需要阻塞，那么进行 CAS，成功就代表获取到了写锁
             if (writerShouldBlock() ||
                 !compareAndSetState(c, c + acquires))
                 return false;
