@@ -713,6 +713,7 @@ public abstract class AbstractQueuedSynchronizer
     }
 
     /**
+     * 唤醒阻塞队列中的线程
      * Release action for shared mode -- signals successor and ensures
      * propagation. (Note: For exclusive mode, release just amounts
      * to calling unparkSuccessor of head if it needs signal.)
@@ -729,25 +730,40 @@ public abstract class AbstractQueuedSynchronizer
          * unparkSuccessor, we need to know if CAS to reset status
          * fails, if so rechecking.
          */
+        //自旋
         for (;;) {
+            //获取头节点
             Node h = head;
+            // 1. h == null: 说明阻塞队列为空
+            // 2. h == tail: 说明头结点可能是刚刚初始化的头节点，
+            //   或者是普通线程节点，但是此节点既然是头节点了，那么代表已经被唤醒了，阻塞队列没有其他节点了
+            // 所以这两种情况不需要进行唤醒后继节点
             if (h != null && h != tail) {
+                //获取 h 节点状态
                 int ws = h.waitStatus;
+                //如果 h 节点是唤醒后继节点的状态
                 if (ws == Node.SIGNAL) {
+                    // 将 head 的 waitStatue 设置为 0
                     if (!compareAndSetWaitStatus(h, Node.SIGNAL, 0))
                         continue;            // loop to recheck cases
+                    //唤醒 head 的后继节点，也就是阻塞队列中的第一个节点
                     unparkSuccessor(h);
                 }
                 else if (ws == 0 &&
+                        // 这个 CAS 失败的场景是：执行到这里的时候，刚好有一个节点入队，入队会将这个 ws 设置为 -1
                          !compareAndSetWaitStatus(h, 0, Node.PROPAGATE))
                     continue;                // loop on failed CAS
             }
+            //h == head：说明头节点还没有被刚刚用 unparkSuccessor 唤醒的线程（h 后面的节点）占有，此时 break 退出循环
+            //h != head：头节点被刚刚唤醒的线程（h 后面的节点）占有，那么这里重新进入下一轮循环，唤醒下一个节点
+            // 为什么要继续循环, 可能是出于吞吐量的考虑
             if (h == head)                   // loop if head changed
                 break;
         }
     }
 
     /**
+     * 先把 head 给占了，然后唤醒队列中其他的线程
      * Sets head of queue, and checks if successor may be waiting
      * in shared mode, if so propagating if either propagate > 0 or
      * PROPAGATE status was set.
@@ -756,6 +772,7 @@ public abstract class AbstractQueuedSynchronizer
      * @param propagate the return value from a tryAcquireShared
      */
     private void setHeadAndPropagate(Node node, int propagate) {
+        //先设置 node 为 head 节点
         Node h = head; // Record old head for check below
         setHead(node);
         /*
@@ -774,6 +791,7 @@ public abstract class AbstractQueuedSynchronizer
          * racing acquires/releases, so most need signals now or soon
          * anyway.
          */
+        //唤醒当前 node 之后的节点
         if (propagate > 0 || h == null || h.waitStatus < 0 ||
             (h = head) == null || h.waitStatus < 0) {
             Node s = node.next;
@@ -1110,13 +1128,18 @@ public abstract class AbstractQueuedSynchronizer
      */
     private void doAcquireSharedInterruptibly(int arg)
         throws InterruptedException {
+        //入队
         final Node node = addWaiter(Node.SHARED);
         boolean failed = true;
         try {
             for (;;) {
+                //获取当前节点的前继节点
                 final Node p = node.predecessor();
+                //如果 p == head , 则 node 为列表头节点
                 if (p == head) {
+                    //尝试争锁
                     int r = tryAcquireShared(arg);
+                    //如果 >= 0 , 则表示已经可以获取锁
                     if (r >= 0) {
                         setHeadAndPropagate(node, r);
                         p.next = null; // help GC
@@ -1124,8 +1147,10 @@ public abstract class AbstractQueuedSynchronizer
                         return;
                     }
                 }
+                //判断是否需要挂起
                 if (shouldParkAfterFailedAcquire(p, node) &&
                     parkAndCheckInterrupt())
+                    //如果中断, 则抛异常
                     throw new InterruptedException();
             }
         } finally {
@@ -1439,8 +1464,10 @@ public abstract class AbstractQueuedSynchronizer
      */
     public final void acquireSharedInterruptibly(int arg)
             throws InterruptedException {
+        //如果线程中断
         if (Thread.interrupted())
             throw new InterruptedException();
+        //如果锁状态小于 0 , 则等待
         if (tryAcquireShared(arg) < 0)
             doAcquireSharedInterruptibly(arg);
     }
@@ -1479,7 +1506,9 @@ public abstract class AbstractQueuedSynchronizer
      * @return the value returned from {@link #tryReleaseShared}
      */
     public final boolean releaseShared(int arg) {
+        //如果释放成功
         if (tryReleaseShared(arg)) {
+            // 唤醒 await 的线程
             doReleaseShared();
             return true;
         }
