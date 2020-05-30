@@ -150,6 +150,9 @@ import java.util.concurrent.locks.AbstractQueuedSynchronizer;
  * actions following a successful return from a corresponding
  * {@code await()} in another thread.
  *
+ * 它其实是作用于线程当中的，它就像一个门栓，一开始是关闭的，所有希望通过该门的线程都需要等待，然后开始倒计时，当倒计时一到，等待的所有线程都可以通过
+ *  - 它是一次性的，打开之后就不能关上了
+ *
  * @since 1.5
  * @author Doug Lea
  */
