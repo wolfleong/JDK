@@ -423,8 +423,8 @@ public class StampedLock implements java.io.Serializable {
      */
     public long writeLock() {
         long s, next;  // bypass acquireWrite in fully unlocked case only
-        //((s = state) & ABITS) == 0L 表示没有写锁也没有读锁
-        //state 与 ABITS 如果等于0，尝试原子更新state的值加 WBITS, 如果成功则返回更新的值
+        //((s = state) & ABITS) == 0L 表示没有写锁也没有读锁, 也就是低 8 位都是 0
+        //state & ABITS 如果等于0，尝试原子更新state的值加 WBITS, 如果成功则返回更新的值 next
         //如果有读锁或写锁或更新锁状态失败, 则调用 acquireWrite() 方法
         return ((((s = state) & ABITS) == 0L &&
                  U.compareAndSwapLong(this, STATE, s, next = s + WBIT)) ?
