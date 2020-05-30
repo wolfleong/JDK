@@ -199,6 +199,7 @@ public class Semaphore implements java.io.Serializable {
             for (;;) {
                 int current = getState();
                 int next = current - reductions;
+                // 溢出，当然，我们一般也不会用这么大的数
                 if (next > current) // underflow
                     throw new Error("Permit count underflow");
                 if (compareAndSetState(current, next))
@@ -216,6 +217,7 @@ public class Semaphore implements java.io.Serializable {
     }
 
     /**
+     * 非公平版本
      * NonFair version
      */
     static final class NonfairSync extends Sync {
@@ -231,6 +233,7 @@ public class Semaphore implements java.io.Serializable {
     }
 
     /**
+     * 公平版本
      * Fair version
      */
     static final class FairSync extends Sync {
@@ -240,12 +243,21 @@ public class Semaphore implements java.io.Serializable {
             super(permits);
         }
 
+        /**
+         * 由于 tryAcquireShared(arg) 返回小于 0 的时候，说明 state 已经小于 0 了（没资源了），
+         * 此时 acquire 不能立马拿到资源，需要进入到阻塞队列等待
+         */
         protected int tryAcquireShared(int acquires) {
             for (;;) {
+                // 区别就在于是不是会先判断是否有线程在排队，然后才进行 CAS 减操作
                 if (hasQueuedPredecessors())
                     return -1;
+                //获取锁状态
                 int available = getState();
+                //计算剩余状态
                 int remaining = available - acquires;
+                //剩余状态小于0 , 则直接返回
+                //剩余状态大于0, 则 cas 设置, 并且返回
                 if (remaining < 0 ||
                     compareAndSetState(available, remaining))
                     return remaining;
