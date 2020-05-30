@@ -173,12 +173,15 @@ import java.util.Date;
  * shown that the interrupt occurred after another action that may have
  * unblocked the thread. An implementation should document this behavior.
  *
+ * 条件
+ *
  * @since 1.5
  * @author Doug Lea
  */
 public interface Condition {
 
     /**
+     * 等待
      * Causes the current thread to wait until it is signalled or
      * {@linkplain Thread#interrupt interrupted}.
      *
@@ -231,6 +234,7 @@ public interface Condition {
     void await() throws InterruptedException;
 
     /**
+     * 不可中断等待
      * Causes the current thread to wait until it is signalled.
      *
      * <p>The lock associated with this condition is atomically
@@ -267,6 +271,7 @@ public interface Condition {
     void awaitUninterruptibly();
 
     /**
+     * 可超时等待
      * Causes the current thread to wait until it is signalled or interrupted,
      * or the specified waiting time elapses.
      *
@@ -450,6 +455,7 @@ public interface Condition {
     boolean awaitUntil(Date deadline) throws InterruptedException;
 
     /**
+     * 唤醒
      * Wakes up one waiting thread.
      *
      * <p>If any threads are waiting on this condition then one
@@ -468,6 +474,7 @@ public interface Condition {
     void signal();
 
     /**
+     * 全部唤醒
      * Wakes up all waiting threads.
      *
      * <p>If any threads are waiting on this condition then they are
