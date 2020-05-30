@@ -36,6 +36,7 @@
 package java.util.concurrent.locks;
 
 /**
+ * 设置 和 获取独占锁的拥有者线程
  * A synchronizer that may be exclusively owned by a thread.  This
  * class provides a basis for creating locks and related synchronizers
  * that may entail a notion of ownership.  The
