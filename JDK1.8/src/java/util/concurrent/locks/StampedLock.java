@@ -374,7 +374,7 @@ public class StampedLock implements java.io.Serializable {
         volatile WNode cowait;    // list of linked readers
         // 阻塞的线程引用, 主要是用被唤醒的
         volatile Thread thread;   // non-null while possibly parked
-        // 状态, 0, WAITING(-1), CANCELLED(1)
+        // 状态, 默认是 0, WAITING(-1), CANCELLED(1)
         volatile int status;      // 0, WAITING, or CANCELLED
         //当前节点是处于读锁模式还是写锁模式
         final int mode;           // RMODE or WMODE
