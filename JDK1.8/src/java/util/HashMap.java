@@ -2244,7 +2244,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
             boolean searched = false;
             //parent不为 null, 则遍历找到树的根节点, 为 null 则根节点为当前节点
             TreeNode<K,V> root = (parent != null) ? root() : this;
-            //// 从树的根节点开始遍历
+            // 从树的根节点开始遍历
             for (TreeNode<K,V> p = root;;) {
                 // dir=direction，标记给定 k 是在当前 TreeNode 的左边还是右边, dir 的值为 -1(左) 或 1(右)
                 // ph=p.hash，当前节点的hash值
