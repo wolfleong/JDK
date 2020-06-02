@@ -76,6 +76,16 @@ import java.util.stream.StreamSupport;
  * seed unless the {@linkplain System#getProperty system property}
  * {@code java.util.secureRandomSeed} is set to {@code true}.
  *
+ * Random 的并发缺陷:
+ * 每个Random实例里面有一个原子性的种子变量用来记录当前的种子的值，当要生成新的随机数时候要根据当前种子计算新的种子并更新回原子变量。
+ * 多线程下使用单个Random实例生成随机数时候，多个线程同时计算随机数计算新的种子时候多个线程会竞争同一个原子变量的更新操作，
+ * 由于原子变量的更新是CAS操作，同时只有一个线程会成功，所以会造成大量线程进行自旋重试，这是会降低并发性能的，所以ThreadLocalRandom应运而生.
+ *
+ * 为了解决多线程高并发下Random的缺陷，JUC包下新增了ThreadLocalRandom类
+ *
+ * ThreadLocalRandom使用ThreadLocal的原理，让每个线程内持有一个本地的种子变量，该种子变量只有在使用随机数时候才会被初始化，
+ * 多线程下计算新种子时候是根据自己线程内维护的种子变量进行更新，从而避免了竞争
+ *
  * @since 1.7
  * @author Doug Lea
  */
@@ -211,7 +221,9 @@ public class ThreadLocalRandom extends Random {
         //如果 probeGenerator 为 0，这取 1, 跳过 0
         int probe = (p == 0) ? 1 : p; // skip 0
         long seed = mix64(seeder.getAndAdd(SEEDER_INCREMENT));
+        //获取当前线程
         Thread t = Thread.currentThread();
+        //添加种了到线程变量中
         UNSAFE.putLong(t, SEED, seed);
         //设置到线程变量中
         UNSAFE.putInt(t, PROBE, probe);
@@ -243,8 +255,11 @@ public class ThreadLocalRandom extends Random {
 
     final long nextSeed() {
         Thread t; long r; // read and update per-thread seed
+        //获取线程上的旧 seed 变量
+        //将旧 seed + GAMMA 变成新种子, 再设置回线程的 seed 中
         UNSAFE.putLong(t = Thread.currentThread(), SEED,
                        r = UNSAFE.getLong(t, SEED) + GAMMA);
+        //返回新种子
         return r;
     }
 
@@ -1062,12 +1077,16 @@ public class ThreadLocalRandom extends Random {
     private static final long SECONDARY;
     static {
         try {
+            //获取unsafe实例
             UNSAFE = sun.misc.Unsafe.getUnsafe();
             Class<?> tk = Thread.class;
+            //获取Thread类里面threadLocalRandomSeed变量在Thread实例里面偏移量
             SEED = UNSAFE.objectFieldOffset
                 (tk.getDeclaredField("threadLocalRandomSeed"));
+            //获取Thread类里面threadLocalRandomProbe变量在Thread实例里面偏移量
             PROBE = UNSAFE.objectFieldOffset
                 (tk.getDeclaredField("threadLocalRandomProbe"));
+            //获取Thread类里面threadLocalRandomProbe变量在Thread实例里面偏移量
             SECONDARY = UNSAFE.objectFieldOffset
                 (tk.getDeclaredField("threadLocalRandomSecondarySeed"));
         } catch (Exception e) {

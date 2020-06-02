@@ -70,6 +70,8 @@ import sun.misc.Unsafe;
  * get a cryptographically secure pseudo-random number generator for use
  * by security-sensitive applications.
  *
+ * 随机数生成器
+ *
  * @author  Frank Yellin
  * @since   1.0
  */
@@ -79,6 +81,7 @@ class Random implements java.io.Serializable {
     static final long serialVersionUID = 3905348978240129619L;
 
     /**
+     * 种子
      * The internal state associated with this pseudorandom number generator.
      * (The specs for the methods in this class describe the ongoing
      * computation of this value.)
@@ -199,8 +202,11 @@ class Random implements java.io.Serializable {
         long oldseed, nextseed;
         AtomicLong seed = this.seed;
         do {
+            //获取当前原子变量种子的值
             oldseed = seed.get();
+            //根据当前种子值计算新的种子
             nextseed = (oldseed * multiplier + addend) & mask;
+            //使用CAS操作，使用新的种子去更新老的种子, 如果有多线程并发, 这里可以有就成为性能瓶颈
         } while (!seed.compareAndSet(oldseed, nextseed));
         return (int)(nextseed >>> (48 - bits));
     }
@@ -384,10 +390,13 @@ class Random implements java.io.Serializable {
      * @since 1.2
      */
     public int nextInt(int bound) {
+        //参数检查
         if (bound <= 0)
             throw new IllegalArgumentException(BadBound);
 
+        //根据老的种子生成新的种子
         int r = next(31);
+        //根据新的种子计算随机数
         int m = bound - 1;
         if ((bound & m) == 0)  // i.e., bound is a power of 2
             r = (int)((bound * (long)r) >> 31);
