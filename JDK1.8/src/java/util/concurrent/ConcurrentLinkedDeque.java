@@ -85,6 +85,8 @@ import java.util.function.Consumer;
  * Java Collections Framework</a>.
  *
  * ConcurrentLinkedDeque 实现原理跟 ConcurrentLinkedQueue 的基本一致
+ * - 双向队列
+ * - cas 自旋锁控制线程安全
  *
  * @since 1.7
  * @author Doug Lea

@@ -72,6 +72,10 @@ import java.util.function.Consumer;
  *
  * LinkedBlockingDeque 实现原理跟 LinkedBlockingQueue 基本一致
  *
+ * 不同点
+ * - 双向队列
+ * - 一个 ReentrantLock 两个条件控制线程并发
+ *
  * @since 1.6
  * @author  Doug Lea
  * @param <E> the type of elements held in this collection
