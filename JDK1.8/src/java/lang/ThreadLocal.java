@@ -102,6 +102,7 @@ public class ThreadLocal<T> {
      * Returns the next hash code.
      */
     private static int nextHashCode() {
+        //计算 hashCode 时, 每次都加黄金数
         return nextHashCode.getAndAdd(HASH_INCREMENT);
     }
 
