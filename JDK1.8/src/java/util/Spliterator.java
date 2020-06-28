@@ -288,6 +288,8 @@ import java.util.function.LongConsumer;
  * is set to {@code true} then diagnostic warnings are reported if boxing of
  * primitive values occur when operating on primitive subtype specializations.
  *
+ * 可分割的迭代器
+ *
  * @param <T> the type of elements returned by this Spliterator
  *
  * @see Collection
@@ -295,6 +297,8 @@ import java.util.function.LongConsumer;
  */
 public interface Spliterator<T> {
     /**
+     *  该方法会处理每个元素，如果没有元素处理，则应该返回false，否则返回true , 相当于普通的 iterator 的迭代
+     *
      * If a remaining element exists, performs the given action on it,
      * returning {@code true}; else returns {@code false}.  If this
      * Spliterator is {@link #ORDERED} the action is performed on the
@@ -309,6 +313,7 @@ public interface Spliterator<T> {
     boolean tryAdvance(Consumer<? super T> action);
 
     /**
+     * 该方法循环遍历调用tryAdvance方法，直到返回false。
      * Performs the given action for each remaining element, sequentially in
      * the current thread, until all elements have been processed or the action
      * throws an exception.  If this Spliterator is {@link #ORDERED}, actions
@@ -327,6 +332,9 @@ public interface Spliterator<T> {
     }
 
     /**
+     * 将一个Spliterator分割成多个Spliterator。分割的Spliterator被用于每个子线程进行处理，从而达到并发处理的效果,
+     * 想想 ForkJoinTask 怎么切割的就明白了
+     *
      * If this spliterator can be partitioned, returns a Spliterator
      * covering elements, that will, upon return from this method, not
      * be covered by this Spliterator.
@@ -370,6 +378,8 @@ public interface Spliterator<T> {
     Spliterator<T> trySplit();
 
     /**
+     * 返回当前 Spliterator 预估的元素个数
+     * 该方法返回值并不会对代码正确性产生影响，但是会影响代码的执行线程数
      * Returns an estimate of the number of elements that would be
      * encountered by a {@link #forEachRemaining} traversal, or returns {@link
      * Long#MAX_VALUE} if infinite, unknown, or too expensive to compute.
@@ -395,6 +405,7 @@ public interface Spliterator<T> {
     long estimateSize();
 
     /**
+     * 当迭代器拥有SIZED特征时，返回剩余元素个数；否则返回-1
      * Convenience method that returns {@link #estimateSize()} if this
      * Spliterator is {@link #SIZED}, else {@code -1}.
      * @implSpec
@@ -409,6 +420,7 @@ public interface Spliterator<T> {
     }
 
     /**
+     * 返回当前对象有哪些特征值
      * Returns a set of characteristics of this Spliterator and its
      * elements. The result is represented as ORed values from {@link
      * #ORDERED}, {@link #DISTINCT}, {@link #SORTED}, {@link #SIZED},
@@ -432,6 +444,7 @@ public interface Spliterator<T> {
     int characteristics();
 
     /**
+     * 是否具有当前特征值
      * Returns {@code true} if this Spliterator's {@link
      * #characteristics} contain all of the given characteristics.
      *
@@ -448,6 +461,9 @@ public interface Spliterator<T> {
     }
 
     /**
+     *  - 如果Spliterator的list是通过Comparator排序的，则返回Comparator
+     *  - 如果Spliterator的list是自然排序的 ，则返回null
+     *  - 其他情况下抛错
      * If this Spliterator's source is {@link #SORTED} by a {@link Comparator},
      * returns that {@code Comparator}. If the source is {@code SORTED} in
      * {@linkplain Comparable natural order}, returns {@code null}.  Otherwise,
@@ -466,6 +482,7 @@ public interface Spliterator<T> {
     }
 
     /**
+     * 表示元素是有序的（每一次遍历结果相同）
      * Characteristic value signifying that an encounter order is defined for
      * elements. If so, this Spliterator guarantees that method
      * {@link #trySplit} splits a strict prefix of elements, that method
@@ -486,6 +503,7 @@ public interface Spliterator<T> {
     public static final int ORDERED    = 0x00000010;
 
     /**
+     * 表示元素不重复
      * Characteristic value signifying that, for each pair of
      * encountered elements {@code x, y}, {@code !x.equals(y)}. This
      * applies for example, to a Spliterator based on a {@link Set}.
@@ -493,6 +511,7 @@ public interface Spliterator<T> {
     public static final int DISTINCT   = 0x00000001;
 
     /**
+     * 表示元素是按一定规律进行排列（有指定比较器）
      * Characteristic value signifying that encounter order follows a defined
      * sort order. If so, method {@link #getComparator()} returns the associated
      * Comparator, or {@code null} if all elements are {@link Comparable} and
@@ -507,6 +526,7 @@ public interface Spliterator<T> {
     public static final int SORTED     = 0x00000004;
 
     /**
+     * 表示大小是固定的
      * Characteristic value signifying that the value returned from
      * {@code estimateSize()} prior to traversal or splitting represents a
      * finite size that, in the absence of structural source modification,
@@ -521,6 +541,7 @@ public interface Spliterator<T> {
     public static final int SIZED      = 0x00000040;
 
     /**
+     * 表示没有null元素
      * Characteristic value signifying that the source guarantees that
      * encountered elements will not be {@code null}. (This applies,
      * for example, to most concurrent collections, queues, and maps.)
@@ -528,6 +549,7 @@ public interface Spliterator<T> {
     public static final int NONNULL    = 0x00000100;
 
     /**
+     * 表示元素不可变
      * Characteristic value signifying that the element source cannot be
      * structurally modified; that is, elements cannot be added, replaced, or
      * removed, so such changes cannot occur during traversal. A Spliterator
@@ -539,6 +561,7 @@ public interface Spliterator<T> {
     public static final int IMMUTABLE  = 0x00000400;
 
     /**
+     * 表示迭代器可以多线程操作
      * Characteristic value signifying that the element source may be safely
      * concurrently modified (allowing additions, replacements, and/or removals)
      * by multiple threads without external synchronization. If so, the
@@ -561,6 +584,7 @@ public interface Spliterator<T> {
     public static final int CONCURRENT = 0x00001000;
 
     /**
+     * 表示子Spliterators都具有SIZED特性
      * Characteristic value signifying that all Spliterators resulting from
      * {@code trySplit()} will be both {@link #SIZED} and {@link #SUBSIZED}.
      * (This means that all child Spliterators, whether direct or indirect, will

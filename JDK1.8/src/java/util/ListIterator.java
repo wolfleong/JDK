@@ -49,6 +49,12 @@ package java.util;
  * <a href="{@docRoot}/../technotes/guides/collections/index.html">
  * Java Collections Framework</a>.
  *
+ * 它只在 List 上进行使用，可以双向迭代，这意味着你可以从前到后或从后到前进行迭代
+ *
+ * Iterator 和 ListIterator 之间有什么区别呢?
+ *  - Iterator 可以用于 任意集合 —— List、Map、Queue、Set 等, 且只能向后迭代
+ *  - ListIterator 只能应用于 List, 并且可以向前向后迭代
+ *
  * @author  Josh Bloch
  * @see Collection
  * @see List
@@ -61,6 +67,7 @@ public interface ListIterator<E> extends Iterator<E> {
     // Query Operations
 
     /**
+     * 是否有下一个元素
      * Returns {@code true} if this list iterator has more elements when
      * traversing the list in the forward direction. (In other words,
      * returns {@code true} if {@link #next} would return an element rather
@@ -72,6 +79,7 @@ public interface ListIterator<E> extends Iterator<E> {
     boolean hasNext();
 
     /**
+     * 返回 List 中的下一个元素
      * Returns the next element in the list and advances the cursor position.
      * This method may be called repeatedly to iterate through the list,
      * or intermixed with calls to {@link #previous} to go back and forth.
@@ -84,6 +92,7 @@ public interface ListIterator<E> extends Iterator<E> {
     E next();
 
     /**
+     * 是否有前一个元素
      * Returns {@code true} if this list iterator has more elements when
      * traversing the list in the reverse direction.  (In other words,
      * returns {@code true} if {@link #previous} would return an element
@@ -95,6 +104,7 @@ public interface ListIterator<E> extends Iterator<E> {
     boolean hasPrevious();
 
     /**
+     * 返回前一个元素
      * Returns the previous element in the list and moves the cursor
      * position backwards.  This method may be called repeatedly to
      * iterate through the list backwards, or intermixed with calls to
@@ -109,6 +119,7 @@ public interface ListIterator<E> extends Iterator<E> {
     E previous();
 
     /**
+     * 下一个元素的索引下标
      * Returns the index of the element that would be returned by a
      * subsequent call to {@link #next}. (Returns list size if the list
      * iterator is at the end of the list.)
@@ -120,6 +131,7 @@ public interface ListIterator<E> extends Iterator<E> {
     int nextIndex();
 
     /**
+     * 上一个元素的索引下标
      * Returns the index of the element that would be returned by a
      * subsequent call to {@link #previous}. (Returns -1 if the list
      * iterator is at the beginning of the list.)
@@ -134,6 +146,7 @@ public interface ListIterator<E> extends Iterator<E> {
     // Modification Operations
 
     /**
+     * 从 List 中删除 .next() 或 .previous() 返回的最后一个元素
      * Removes from the list the last element that was returned by {@link
      * #next} or {@link #previous} (optional operation).  This call can
      * only be made once per call to {@code next} or {@code previous}.
@@ -150,6 +163,7 @@ public interface ListIterator<E> extends Iterator<E> {
     void remove();
 
     /**
+     * 使用指定元素来覆盖 List .next（） 或 .previous（） 返回的最后一个元素
      * Replaces the last element returned by {@link #next} or
      * {@link #previous} with the specified element (optional operation).
      * This call can be made only if neither {@link #remove} nor {@link
@@ -172,6 +186,7 @@ public interface ListIterator<E> extends Iterator<E> {
     void set(E e);
 
     /**
+     * 添加元素
      * Inserts the specified element into the list (optional operation).
      * The element is inserted immediately before the element that
      * would be returned by {@link #next}, if any, and after the element

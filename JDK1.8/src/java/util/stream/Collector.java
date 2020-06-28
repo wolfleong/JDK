@@ -188,14 +188,16 @@ import java.util.function.Supplier;
  * @see Stream#collect(Collector)
  * @see Collectors
  *
- * @param <T> the type of input elements to the reduction operation
+ * @param <T> the type of input elements to the reduction operation 元素类型
  * @param <A> the mutable accumulation type of the reduction operation (often
- *            hidden as an implementation detail)
- * @param <R> the result type of the reduction operation
+ *            hidden as an implementation detail) 累积部分结果的对象类型
+ * @param <R> the result type of the reduction operation 最终结果的类型
  * @since 1.8
  */
 public interface Collector<T, A, R> {
     /**
+     * 建立新的结果容器, 如:
+     *   return () -> new ArrayList<T>();
      * A function that creates and returns a new mutable result container.
      *
      * @return a function which returns a new, mutable result container
@@ -203,6 +205,7 @@ public interface Collector<T, A, R> {
     Supplier<A> supplier();
 
     /**
+     * 将元素添加到结果容器
      * A function that folds a value into a mutable result container.
      *
      * @return a function which folds a value into a mutable result container
@@ -210,6 +213,7 @@ public interface Collector<T, A, R> {
     BiConsumer<A, T> accumulator();
 
     /**
+     * 合并两个结果容器
      * A function that accepts two partial results and merges them.  The
      * combiner function may fold state from one argument into the other and
      * return that, or may return a new result container.
@@ -220,6 +224,7 @@ public interface Collector<T, A, R> {
     BinaryOperator<A> combiner();
 
     /**
+     * 对结果容器应用最终转换
      * Perform the final transformation from the intermediate accumulation type
      * {@code A} to the final result type {@code R}.
      *
@@ -233,6 +238,7 @@ public interface Collector<T, A, R> {
     Function<A, R> finisher();
 
     /**
+     * 返回一个不可变的Characteristics集合，它定义了收集器的行为, 尤其是关于流是否可以并行归约，以及可以使用哪些优化的提示
      * Returns a {@code Set} of {@code Collector.Characteristics} indicating
      * the characteristics of this Collector.  This set should be immutable.
      *
@@ -313,6 +319,8 @@ public interface Collector<T, A, R> {
      */
     enum Characteristics {
         /**
+         * accumulator函数可以从多个线程同时调用，且该收集器可以并行归约流。
+         * 如果收集器没有标为UNORDERED，那它仅在用于无序数据源时才可以并行归约
          * Indicates that this collector is <em>concurrent</em>, meaning that
          * the result container can support the accumulator function being
          * called concurrently with the same result container from multiple
@@ -325,6 +333,7 @@ public interface Collector<T, A, R> {
         CONCURRENT,
 
         /**
+         * 归约结果不受流中项目的遍历和累积顺序的影响
          * Indicates that the collection operation does not commit to preserving
          * the encounter order of input elements.  (This might be true if the
          * result container has no intrinsic order, such as a {@link Set}.)
@@ -332,6 +341,8 @@ public interface Collector<T, A, R> {
         UNORDERED,
 
         /**
+         * 这表明完成器方法返回的函数是一个恒等函数，可以跳过.这种
+         * 情况下，累加器对象将会直接用作归约过程的最终结果。这也意味着，将累加器A不加检 15 查地转换为结果R是安全的。
          * Indicates that the finisher function is the identity function and
          * can be elided.  If set, it must be the case that an unchecked cast
          * from A to R will succeed.
