@@ -50,6 +50,7 @@ package java.lang;
  */
 public interface AutoCloseable {
     /**
+     * 自动关闭资源接口
      * Closes this resource, relinquishing any underlying resources.
      * This method is invoked automatically on objects managed by the
      * {@code try}-with-resources statement.

@@ -87,6 +87,8 @@ package java.util.concurrent;
  * <a href="package-summary.html#MemoryVisibility"> <i>happen-before</i></a>
  * actions following the corresponding {@code Future.get()} in another thread.
  *
+ * 异步结果
+ *
  * @see FutureTask
  * @see Executor
  * @since 1.5
@@ -96,6 +98,7 @@ package java.util.concurrent;
 public interface Future<V> {
 
     /**
+     * 取消异步任务
      * Attempts to cancel execution of this task.  This attempt will
      * fail if the task has already completed, has already been cancelled,
      * or could not be cancelled for some other reason. If successful,
@@ -119,6 +122,7 @@ public interface Future<V> {
     boolean cancel(boolean mayInterruptIfRunning);
 
     /**
+     * 判断异步任务是否取消
      * Returns {@code true} if this task was cancelled before it completed
      * normally.
      *
@@ -127,6 +131,7 @@ public interface Future<V> {
     boolean isCancelled();
 
     /**
+     * 异步任务是否完成
      * Returns {@code true} if this task completed.
      *
      * Completion may be due to normal termination, an exception, or
@@ -138,6 +143,7 @@ public interface Future<V> {
     boolean isDone();
 
     /**
+     * 获取异步任务结果, 如果没有结果则会阻塞等待
      * Waits if necessary for the computation to complete, and then
      * retrieves its result.
      *
@@ -151,6 +157,7 @@ public interface Future<V> {
     V get() throws InterruptedException, ExecutionException;
 
     /**
+     * 获取异步结果, 指定时间等待
      * Waits if necessary for at most the given time for the computation
      * to complete, and then retrieves its result, if available.
      *

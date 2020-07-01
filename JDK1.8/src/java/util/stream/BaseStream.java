@@ -52,8 +52,8 @@ import java.util.function.Predicate;
  * specification of streams, stream operations, stream pipelines, and
  * parallelism, which governs the behavior of all stream types.
  *
- * @param <T> the type of the stream elements
- * @param <S> the type of of the stream implementing {@code BaseStream}
+ * @param <T> the type of the stream elements T是指定stream元素的类型
+ * @param <S> the type of of the stream implementing {@code BaseStream} S是stream的实现类
  * @since 1.8
  * @see Stream
  * @see IntStream
@@ -64,6 +64,7 @@ import java.util.function.Predicate;
 public interface BaseStream<T, S extends BaseStream<T, S>>
         extends AutoCloseable {
     /**
+     * 返回一个迭代子对象的方法
      * Returns an iterator for the elements of this stream.
      *
      * <p>This is a <a href="package-summary.html#StreamOps">terminal
@@ -74,6 +75,7 @@ public interface BaseStream<T, S extends BaseStream<T, S>>
     Iterator<T> iterator();
 
     /**
+     * 返回 Spliterator
      * Returns a spliterator for the elements of this stream.
      *
      * <p>This is a <a href="package-summary.html#StreamOps">terminal
@@ -84,6 +86,7 @@ public interface BaseStream<T, S extends BaseStream<T, S>>
     Spliterator<T> spliterator();
 
     /**
+     * 判断该流是不是并行执行
      * Returns whether this stream, if a terminal operation were to be executed,
      * would execute in parallel.  Calling this method after invoking an
      * terminal stream operation method may yield unpredictable results.
@@ -93,6 +96,7 @@ public interface BaseStream<T, S extends BaseStream<T, S>>
     boolean isParallel();
 
     /**
+     * 返回一个串行流，如果该流本身就是串行的，则返回他本身
      * Returns an equivalent stream that is sequential.  May return
      * itself, either because the stream was already sequential, or because
      * the underlying stream state was modified to be sequential.
@@ -105,6 +109,7 @@ public interface BaseStream<T, S extends BaseStream<T, S>>
     S sequential();
 
     /**
+     * 返回一个并行流，如果该流本身就是并行的，则返回他本身
      * Returns an equivalent stream that is parallel.  May return
      * itself, either because the stream was already parallel, or because
      * the underlying stream state was modified to be parallel.
@@ -117,6 +122,7 @@ public interface BaseStream<T, S extends BaseStream<T, S>>
     S parallel();
 
     /**
+     * 返回一个无序流，如果该流本身就是无序的，则返回他本身
      * Returns an equivalent stream that is
      * <a href="package-summary.html#Ordering">unordered</a>.  May return
      * itself, either because the stream was already unordered, or because
@@ -130,6 +136,7 @@ public interface BaseStream<T, S extends BaseStream<T, S>>
     S unordered();
 
     /**
+     * 返回一个带着关闭处理的流。closeHandler线程将在调用close()方法时执行。
      * Returns an equivalent stream with an additional close handler.  Close
      * handlers are run when the {@link #close()} method
      * is called on the stream, and are executed in the order they were

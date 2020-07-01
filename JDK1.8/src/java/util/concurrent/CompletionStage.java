@@ -120,12 +120,27 @@ import java.util.concurrent.Executor;
  * enables interoperability among different implementations of this
  * interface by providing a common conversion type.
  *
+ * 定义了一组接口用于在一个阶段执行结束之后，要么继续执行下一个阶段，要么对结果进行转换产生新的结果等等，
+ * 一般来说要执行下一个阶段都需要上一个阶段正常完成，当然这个类也提供了对异常结果的处理接口
+ *
+ * 接口提供的方法整体有以下几种类型:
+ *  - 断言型，如Predicate
+ *  - 消费并产出型，如Function，UnaryOperator
+ *  - 消费不产出型，如Consumer
+ *  - 产出型，Supplier
+ *
+ * 接口方法特征:
+ * - 由一个阶段的完成触发，方法前缀为then
+ * - 由两个阶段的完成触发，方法带有combine或者both
+ * - 由两个阶段中任意一个完成触发，不能保证哪个的结果或效果用于相关阶段的计算，这类方法带有either
+ *
  * @author Doug Lea
  * @since 1.8
  */
 public interface CompletionStage<T> {
 
     /**
+     * 前一个阶段执行完, 再同步触发返回的阶段
      * Returns a new CompletionStage that, when this stage completes
      * normally, is executed with this stage's result as the argument
      * to the supplied function.
@@ -141,6 +156,7 @@ public interface CompletionStage<T> {
     public <U> CompletionStage<U> thenApply(Function<? super T,? extends U> fn);
 
     /**
+     * 前一个阶段执行完, 再异步触发返回的阶段
      * Returns a new CompletionStage that, when this stage completes
      * normally, is executed using this stage's default asynchronous
      * execution facility, with this stage's result as the argument to
@@ -158,6 +174,7 @@ public interface CompletionStage<T> {
         (Function<? super T,? extends U> fn);
 
     /**
+     * 前一个阶段执行完, 再异步触发返回的阶段
      * Returns a new CompletionStage that, when this stage completes
      * normally, is executed using the supplied Executor, with this
      * stage's result as the argument to the supplied function.
