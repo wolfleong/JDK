@@ -27,6 +27,7 @@ package java.util.stream;
 import java.util.Spliterator;
 
 /**
+ * 终止操作接口
  * An operation in a stream pipeline that takes a stream as input and produces
  * a result or side-effect.  A {@code TerminalOp} has an input type and stream
  * shape, and a result type.  A {@code TerminalOp} also has a set of
@@ -44,6 +45,7 @@ import java.util.Spliterator;
  */
 interface TerminalOp<E_IN, R> {
     /**
+     * 输入流的类型
      * Gets the shape of the input type of this operation.
      *
      * @implSpec The default returns {@code StreamShape.REFERENCE}.
@@ -53,6 +55,7 @@ interface TerminalOp<E_IN, R> {
     default StreamShape inputShape() { return StreamShape.REFERENCE; }
 
     /**
+     * 获取操作流的标识
      * Gets the stream flags of the operation.  Terminal operations may set a
      * limited subset of the stream flags defined in {@link StreamOpFlag}, and
      * these flags are combined with the previously combined stream and
@@ -66,6 +69,7 @@ interface TerminalOp<E_IN, R> {
     default int getOpFlags() { return 0; }
 
     /**
+     * 并行计算
      * Performs a parallel evaluation of the operation using the specified
      * {@code PipelineHelper}, which describes the upstream intermediate
      * operations.
@@ -85,6 +89,7 @@ interface TerminalOp<E_IN, R> {
     }
 
     /**
+     * 顺序计算
      * Performs a sequential evaluation of the operation using the specified
      * {@code PipelineHelper}, which describes the upstream intermediate
      * operations.

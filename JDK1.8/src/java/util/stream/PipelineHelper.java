@@ -55,6 +55,7 @@ import java.util.function.IntFunction;
 abstract class PipelineHelper<P_OUT> {
 
     /**
+     * 获取 Stream 的类型
      * Gets the stream shape for the source of the pipeline segment.
      *
      * @return the stream shape for the source of the pipeline segment.
@@ -62,6 +63,7 @@ abstract class PipelineHelper<P_OUT> {
     abstract StreamShape getSourceShape();
 
     /**
+     * 获取组合标志，包含流标志和操作标志
      * Gets the combined stream and operation flags for the output of the described
      * pipeline.  This will incorporate stream flags from the stream source, all
      * the intermediate operations and the terminal operation.
@@ -140,6 +142,8 @@ abstract class PipelineHelper<P_OUT> {
     abstract <P_IN> void copyIntoWithCancel(Sink<P_IN> wrappedSink, Spliterator<P_IN> spliterator);
 
     /**
+     * 当终端操作初始化的时候调用该方法将所有实现 PipelineHelper 类型的中间操作包装到给定的Sink中 ，并返回这个Sink
+     *
      * Takes a {@code Sink} that accepts elements of the output type of the
      * {@code PipelineHelper}, and wrap it with a {@code Sink} that accepts
      * elements of the input type and implements all the intermediate operations
@@ -176,6 +180,7 @@ abstract class PipelineHelper<P_OUT> {
                                                  IntFunction<P_OUT[]> generator);
 
     /**
+     * 在遇到终端操作时执行该方法
      * Collects all output elements resulting from applying the pipeline stages
      * to the source {@code Spliterator} into a {@code Node}.
      *

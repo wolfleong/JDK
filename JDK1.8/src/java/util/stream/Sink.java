@@ -31,6 +31,8 @@ import java.util.function.IntConsumer;
 import java.util.function.LongConsumer;
 
 /**
+ * Sink 接口主要定义了 Stage 之间是如何连接起来的, 也就是如何叠加
+ *
  * An extension of {@link Consumer} used to conduct values through the stages of
  * a stream pipeline, with additional methods to manage size information,
  * control flow, etc.  Before calling the {@code accept()} method on a
@@ -116,6 +118,9 @@ import java.util.function.LongConsumer;
  */
 interface Sink<T> extends Consumer<T> {
     /**
+     * 重置接收器状态以接收新数据集。
+     *   - 在将任何数据发送到接收器之前必须调用此状态。
+     *   - 参数size 是要传数据所包含元素的大小，若不能计算实际 的大小，可以传-1
      * Resets the sink state to receive a fresh data set.  This must be called
      * before sending any data to the sink.  After calling {@link #end()},
      * you may call this method to reset the sink for another calculation.
@@ -128,6 +133,11 @@ interface Sink<T> extends Consumer<T> {
     default void begin(long size) {}
 
     /**
+     * 指示所有元素都已被推送。
+     *   - 如果本Sink是有状态的，  此时它应该将任何存储状态发送到下游，
+     *   - 并且应该清除所有累积的状态(和相关资源)。
+     *   - 在此调用之前，sink必须处于活动状态，在此调用之后，它被返回到初始状态。
+     *
      * Indicates that all elements have been pushed.  If the {@code Sink} is
      * stateful, it should send any stored state downstream at this time, and
      * should clear any accumulated state (and associated resources).
@@ -138,6 +148,7 @@ interface Sink<T> extends Consumer<T> {
     default void end() {}
 
     /**
+     * 表示该Sink 不在接收其他元素，当然默认返回false
      * Indicates that this {@code Sink} does not wish to receive any more data.
      *
      * @implSpec The default implementation always returns false.
@@ -149,6 +160,7 @@ interface Sink<T> extends Consumer<T> {
     }
 
     /**
+     * 消费一个整型的基本类型的元素
      * Accepts an int value.
      *
      * @implSpec The default implementation throws IllegalStateException.
@@ -160,6 +172,7 @@ interface Sink<T> extends Consumer<T> {
     }
 
     /**
+     * 消费一个长整型的基本类型的元素
      * Accepts a long value.
      *
      * @implSpec The default implementation throws IllegalStateException.
@@ -171,6 +184,7 @@ interface Sink<T> extends Consumer<T> {
     }
 
     /**
+     * 消费一个双精度的基本类型的元素
      * Accepts a double value.
      *
      * @implSpec The default implementation throws IllegalStateException.
@@ -233,6 +247,7 @@ interface Sink<T> extends Consumer<T> {
     }
 
     /**
+     * 链表引用, 主要作用是将两个 Sink 连接起来
      * Abstract {@code Sink} implementation for creating chains of
      * sinks.  The {@code begin}, {@code end}, and
      * {@code cancellationRequested} methods are wired to chain to the
@@ -242,8 +257,14 @@ interface Sink<T> extends Consumer<T> {
      * {@code accept()} method on the downstream {@code Sink}.
      */
     static abstract class ChainedReference<T, E_OUT> implements Sink<T> {
+        /**
+         *  下游 其实就是链表的下一个节点，这也和刚才的流管道对应上
+         */
         protected final Sink<? super E_OUT> downstream;
 
+        /**
+         * @param downstream 下游的 Sink
+         */
         public ChainedReference(Sink<? super E_OUT> downstream) {
             this.downstream = Objects.requireNonNull(downstream);
         }

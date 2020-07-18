@@ -53,41 +53,48 @@ final class ReduceOps {
     private ReduceOps() { }
 
     /**
+     * 构造一个结束操作 TerminalOp
      * Constructs a {@code TerminalOp} that implements a functional reduce on
      * reference values.
      *
      * @param <T> the type of the input elements
      * @param <U> the type of the result
-     * @param seed the identity element for the reduction
+     * @param seed the identity element for the reduction 初始值
      * @param reducer the accumulating function that incorporates an additional
-     *        input element into the result
+     *        input element into the result 局部合并函数
      * @param combiner the combining function that combines two intermediate
-     *        results
+     *        results 全局合并函数
      * @return a {@code TerminalOp} implementing the reduction
      */
     public static <T, U> TerminalOp<T, U>
     makeRef(U seed, BiFunction<U, ? super T, U> reducer, BinaryOperator<U> combiner) {
         Objects.requireNonNull(reducer);
         Objects.requireNonNull(combiner);
+        //定义 ReducingSink 类, 这个 Sink 就是终止操作的
         class ReducingSink extends Box<U> implements AccumulatingSink<T, U, ReducingSink> {
             @Override
             public void begin(long size) {
+                //设置初始值
                 state = seed;
             }
 
             @Override
             public void accept(T t) {
+                //调用局部合并
                 state = reducer.apply(state, t);
             }
 
             @Override
             public void combine(ReducingSink other) {
+                //调用全局合并
                 state = combiner.apply(state, other.state);
             }
         }
+        //创建 ReduceOp
         return new ReduceOp<T, U, ReducingSink>(StreamShape.REFERENCE) {
             @Override
             public ReducingSink makeSink() {
+                //创建一个 ReducingSink 返回
                 return new ReducingSink();
             }
         };
@@ -656,12 +663,16 @@ final class ReduceOps {
     }
 
     /**
+     * 状态盒
      * State box for a single state element, used as a base class for
      * {@code AccumulatingSink} instances
      *
      * @param <U> The type of the state element
      */
     private static abstract class Box<U> {
+        /**
+         * 保存的状态
+         */
         U state;
 
         Box() {} // Avoid creation of special accessor
@@ -705,6 +716,7 @@ final class ReduceOps {
         @Override
         public <P_IN> R evaluateSequential(PipelineHelper<T> helper,
                                            Spliterator<P_IN> spliterator) {
+            //启动流水线顺序执行, 并且获取结果
             return helper.wrapAndCopyInto(makeSink(), spliterator).get();
         }
 

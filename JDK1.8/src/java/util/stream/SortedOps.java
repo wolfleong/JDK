@@ -110,14 +110,17 @@ final class SortedOps {
         OfRef(AbstractPipeline<?, T, ?> upstream) {
             super(upstream, StreamShape.REFERENCE,
                   StreamOpFlag.IS_ORDERED | StreamOpFlag.IS_SORTED);
+            //设置自然排序
             this.isNaturalSort = true;
             // Will throw CCE when we try to sort if T is not Comparable
+            //自然排序比较器
             @SuppressWarnings("unchecked")
             Comparator<? super T> comp = (Comparator<? super T>) Comparator.naturalOrder();
             this.comparator = comp;
         }
 
         /**
+         * 指定比较器
          * Sort using the provided comparator.
          *
          * @param comparator The comparator to be used to evaluate ordering.
@@ -125,7 +128,9 @@ final class SortedOps {
         OfRef(AbstractPipeline<?, T, ?> upstream, Comparator<? super T> comparator) {
             super(upstream, StreamShape.REFERENCE,
                   StreamOpFlag.IS_ORDERED | StreamOpFlag.NOT_SORTED);
+            //设置非自然顺序
             this.isNaturalSort = false;
+            //设置排序器
             this.comparator = Objects.requireNonNull(comparator);
         }
 
@@ -135,11 +140,14 @@ final class SortedOps {
 
             // If the input is already naturally sorted and this operation
             // also naturally sorted then this is a no-op
+            //如果 Sink 已经是有序的且是自然顺序, 则直接返回
             if (StreamOpFlag.SORTED.isKnown(flags) && isNaturalSort)
                 return sink;
+            //如果知道大小, 则返回 SizedRefSortingSink
             else if (StreamOpFlag.SIZED.isKnown(flags))
                 return new SizedRefSortingSink<>(sink, comparator);
             else
+                //默认返回
                 return new RefSortingSink<>(sink, comparator);
         }
 
@@ -325,10 +333,17 @@ final class SortedOps {
     }
 
     /**
+     * 确定元素大小的排序
      * {@link Sink} for implementing sort on SIZED reference streams.
      */
     private static final class SizedRefSortingSink<T> extends AbstractRefSortingSink<T> {
+        /**
+         * 数组
+         */
         private T[] array;
+        /**
+         * 偏移量, 也就是存
+         */
         private int offset;
 
         SizedRefSortingSink(Sink<? super T> sink, Comparator<? super T> comparator) {
@@ -338,37 +353,52 @@ final class SortedOps {
         @Override
         @SuppressWarnings("unchecked")
         public void begin(long size) {
+            //校验大小
             if (size >= Nodes.MAX_ARRAY_SIZE)
                 throw new IllegalArgumentException(Nodes.BAD_SIZE);
+            //创建给定长度的数组
             array = (T[]) new Object[(int) size];
         }
 
         @Override
         public void end() {
+            //排序
             Arrays.sort(array, 0, offset, comparator);
+            //调用下游开始
             downstream.begin(offset);
+            // 下游Sink不包含短路操作
             if (!cancellationWasRequested) {
+                //遍历数组, 执行
                 for (int i = 0; i < offset; i++)
                     downstream.accept(array[i]);
             }
+            //下游有短路操作
             else {
+                //遍历执行
                 for (int i = 0; i < offset && !downstream.cancellationRequested(); i++)
                     downstream.accept(array[i]);
             }
+            //结束
             downstream.end();
+            //清空
             array = null;
         }
 
         @Override
         public void accept(T t) {
+            //添加元素并且移动指针
             array[offset++] = t;
         }
     }
 
     /**
+     * 不知道大小的排序
      * {@link Sink} for implementing sort on reference streams.
      */
     private static final class RefSortingSink<T> extends AbstractRefSortingSink<T> {
+        /**
+         * 用于存放排序元素的
+         */
         private ArrayList<T> list;
 
         RefSortingSink(Sink<? super T> sink, Comparator<? super T> comparator) {
@@ -377,30 +407,41 @@ final class SortedOps {
 
         @Override
         public void begin(long size) {
+            //元素长度不能超过最大值
             if (size >= Nodes.MAX_ARRAY_SIZE)
                 throw new IllegalArgumentException(Nodes.BAD_SIZE);
+            //创建一个存放排序元素的列表
             list = (size >= 0) ? new ArrayList<T>((int) size) : new ArrayList<T>();
         }
 
         @Override
         public void end() {
+            // 只有元素全部接收之后才能开始排序
             list.sort(comparator);
+            //执行下游(后面)的
             downstream.begin(list.size());
+            // 下游Sink不包含短路操作
             if (!cancellationWasRequested) {
+                // 将处理结果传递给流水线下游的Sink
                 list.forEach(downstream::accept);
             }
+            // 下游Sink包含短路操作
             else {
                 for (T t : list) {
+                    // 每次都调用cancellationRequested()询问是否可以结束处理。
                     if (downstream.cancellationRequested()) break;
+                    //将处理结果传递给流水线下游的Sink
                     downstream.accept(t);
                 }
             }
+            //下游执行完成
             downstream.end();
             list = null;
         }
 
         @Override
         public void accept(T t) {
+            //添加元素
             list.add(t);
         }
     }

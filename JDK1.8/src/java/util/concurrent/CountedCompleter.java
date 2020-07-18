@@ -411,8 +411,10 @@ package java.util.concurrent;
 public abstract class CountedCompleter<T> extends ForkJoinTask<T> {
     private static final long serialVersionUID = 5232453752276485070L;
 
+    //任务的完成者,很明显这是一个全局的栈结构
     /** This task's completer, or null if none */
     final CountedCompleter<?> completer;
+    //代表完成前挂起的任务数量,用volatile修饰
     /** The number of pending tasks until completion */
     volatile int pending;
 
@@ -430,6 +432,8 @@ public abstract class CountedCompleter<T> extends ForkJoinTask<T> {
     }
 
     /**
+     * 带有 completer 的构造器
+     *
      * Creates a new CountedCompleter with the given completer
      * and an initial pending count of zero.
      *
@@ -440,6 +444,7 @@ public abstract class CountedCompleter<T> extends ForkJoinTask<T> {
     }
 
     /**
+     * 不带completer的构造器
      * Creates a new CountedCompleter with no completer
      * and an initial pending count of zero.
      */
@@ -448,11 +453,18 @@ public abstract class CountedCompleter<T> extends ForkJoinTask<T> {
     }
 
     /**
+     * //抽象的compute方法,它是类似ForkJoinTask的扩展方式
      * The main computation performed by this task.
      */
     public abstract void compute();
 
     /**
+     * //onCompletion勾子方法,默认空实现.
+     * //CountedCompleter 在 tryComplete 方法中会在符合完成的第一个条件(无挂起任务)的情况下执行它.
+     * //complete方法也会对它有无条件地调用.
+     * //关于这两个方法稍后详述.
+     * //它的实现取决于要实现的操作,并行流中的一些ops会在此处进行一些中间结果处理,比如结果集的合并(reduce操作).
+     *
      * Performs an action when method {@link #tryComplete} is invoked
      * and the pending count is zero, or when the unconditional
      * method {@link #complete} is invoked.  By default, this method
@@ -714,10 +726,14 @@ public abstract class CountedCompleter<T> extends ForkJoinTask<T> {
     }
 
     /**
+     * //重写ForkJoinTask中的方法. 在 ForkJoinTask 的 setExceptionalCompletion 会调用 internalPropagateException
+     * //传递异常,而且是个空实现,而在CountedCompleter中实现了该方法,并在内部调用onExceptionalCompletion
+     *
      * Supports ForkJoinTask exception propagation.
      */
     void internalPropagateException(Throwable ex) {
         CountedCompleter<?> a = this, s = a;
+        //循环判断每一个task是否要传递异常给它的completer
         while (a.onExceptionalCompletion(ex, s) &&
                (a = (s = a).completer) != null && a.status >= 0 &&
                a.recordExceptionalCompletion(ex) == EXCEPTIONAL)
@@ -728,6 +744,9 @@ public abstract class CountedCompleter<T> extends ForkJoinTask<T> {
      * Implements execution conventions for CountedCompleters.
      */
     protected final boolean exec() {
+        //直接调用compute方法并返回false.回到ForkJoinTask类中的doExec方法,可以看到
+        //调用了 exec 后若得到 true 值,将会执行 setCompletion(NORMAL) 动作.且该动作将在首次唤醒等待结果的线程.
+        //此处 return 了 false, 将不去执行上述操作
         compute();
         return false;
     }

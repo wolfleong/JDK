@@ -578,6 +578,7 @@ public interface Collection<E> extends Iterable<E> {
      * @since 1.8
      */
     default Stream<E> stream() {
+        //创建 Stream
         return StreamSupport.stream(spliterator(), false);
     }
 

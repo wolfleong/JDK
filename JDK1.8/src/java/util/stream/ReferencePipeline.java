@@ -98,6 +98,7 @@ abstract class ReferencePipeline<P_IN, P_OUT>
 
     @Override
     final StreamShape getOutputShape() {
+        //引用类型的流
         return StreamShape.REFERENCE;
     }
 
@@ -123,6 +124,7 @@ abstract class ReferencePipeline<P_IN, P_OUT>
 
     @Override
     final void forEachWithCancel(Spliterator<P_OUT> spliterator, Sink<P_OUT> sink) {
+        //如果非取消, 则迭代执行
         do { } while (!sink.cancellationRequested() && spliterator.tryAdvance(sink));
     }
 
@@ -183,13 +185,20 @@ abstract class ReferencePipeline<P_IN, P_OUT>
     @SuppressWarnings("unchecked")
     public final <R> Stream<R> map(Function<? super P_OUT, ? extends R> mapper) {
         Objects.requireNonNull(mapper);
+        //创建一个无状态的 Stage
         return new StatelessOp<P_OUT, R>(this, StreamShape.REFERENCE,
                                      StreamOpFlag.NOT_SORTED | StreamOpFlag.NOT_DISTINCT) {
+            /**
+             * 重写 opWrapSink
+             */
             @Override
             Sink<P_OUT> opWrapSink(int flags, Sink<R> sink) {
+                //创建一个链表的引用 Sink
                 return new Sink.ChainedReference<P_OUT, R>(sink) {
                     @Override
                     public void accept(P_OUT u) {
+                        //1. 使用当前Sink包装的回调函数mapper处理u
+                        //2. 将处理结果传递给流水线下游的Sink
                         downstream.accept(mapper.apply(u));
                     }
                 };
@@ -481,6 +490,7 @@ abstract class ReferencePipeline<P_IN, P_OUT>
 
     @Override
     public final <R> R reduce(R identity, BiFunction<R, ? super P_OUT, R> accumulator, BinaryOperator<R> combiner) {
+        //调用 ReduceOps.makeRef 创建 TerminalOp 实例, 然后调用 evaluate
         return evaluate(ReduceOps.makeRef(identity, accumulator, combiner));
     }
 
@@ -530,6 +540,7 @@ abstract class ReferencePipeline<P_IN, P_OUT>
     //
 
     /**
+     * 数据源 Stage
      * Source stage of a ReferencePipeline.
      *
      * @param <E_IN> type of elements in the upstream source
@@ -564,6 +575,7 @@ abstract class ReferencePipeline<P_IN, P_OUT>
 
         @Override
         final boolean opIsStateful() {
+            //是否有状态抛异常
             throw new UnsupportedOperationException();
         }
 
@@ -596,6 +608,9 @@ abstract class ReferencePipeline<P_IN, P_OUT>
     }
 
     /**
+     * 无状态的 Stage , 如: unordered() filter() map() mapToInt() mapToLong() mapToDouble() flatMap() flatMapToInt()
+     * flatMapToLong() flatMapToDouble() peek()
+     *
      * Base class for a stateless intermediate stage of a Stream.
      *
      * @param <E_IN> type of elements in the upstream source
@@ -621,11 +636,13 @@ abstract class ReferencePipeline<P_IN, P_OUT>
 
         @Override
         final boolean opIsStateful() {
+            //返回无状态
             return false;
         }
     }
 
     /**
+     * 有状态的 Stage, 如: distinct() sorted() sorted() limit() skip()
      * Base class for a stateful intermediate stage of a Stream.
      *
      * @param <E_IN> type of elements in the upstream source
@@ -650,6 +667,7 @@ abstract class ReferencePipeline<P_IN, P_OUT>
 
         @Override
         final boolean opIsStateful() {
+            //返回有状态
             return true;
         }
 

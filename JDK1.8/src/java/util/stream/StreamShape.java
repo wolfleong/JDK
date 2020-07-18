@@ -44,25 +44,31 @@ package java.util.stream;
  * generic type parameter should correspond to the wrapper type for that
  * primitive type.
  *
+ * Stream 流的类型
+ *
  * @since 1.8
  */
 enum StreamShape {
     /**
+     * 引用类型的 Stream
      * The shape specialization corresponding to {@code Stream} and elements
      * that are object references.
      */
     REFERENCE,
     /**
+     * IntStream 类型
      * The shape specialization corresponding to {@code IntStream} and elements
      * that are {@code int} values.
      */
     INT_VALUE,
     /**
+     * LongStream 类型
      * The shape specialization corresponding to {@code LongStream} and elements
      * that are {@code long} values.
      */
     LONG_VALUE,
     /**
+     * DoubleStream 类型
      * The shape specialization corresponding to {@code DoubleStream} and
      * elements that are {@code double} values.
      */
