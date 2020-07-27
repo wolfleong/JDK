@@ -655,23 +655,31 @@ public class CompletableFuture<T> implements Future<T>, CompletionStage<T> {
     }
 
     /**
+     * a 表示依赖的 CompletableFuture
      * Post-processing by dependent after successful UniCompletion
      * tryFire.  Tries to clean stack of source a, and then either runs
      * postComplete or returns this to caller, depending on mode.
      */
     final CompletableFuture<T> postFire(CompletableFuture<?> a, int mode) {
+        //a 不为 null 且
         if (a != null && a.stack != null) {
+            //如果 mode 是 NESTED 或依赖的 CompletableFuture 还没有结果
             if (mode < 0 || a.result == null)
+                //清空栈
                 a.cleanStack();
             else
+                //执行 a 所有依赖
                 a.postComplete();
         }
+        //如果当前 CompletableFuture 已经有结果, 且有 stack , 则执行当前 stack
         if (result != null && stack != null) {
+            // mode < 0 表示 NESTED, 直接返回当前
             if (mode < 0)
                 return this;
             else
                 postComplete();
         }
+        //默认返回 null
         return null;
     }
 
@@ -689,26 +697,31 @@ public class CompletableFuture<T> implements Future<T>, CompletionStage<T> {
         }
 
         /**
-         * 尝试执行步骤内容
+         * 尝试执行当前函数
+         * mode > 0 表示异步. SYNC: 0, ASYNC: 1, NESTED: -1
          */
         final CompletableFuture<V> tryFire(int mode) {
             //d 是当前执行函数的 CompletableFuture
             //a 是依赖的 CompletableFuture
             CompletableFuture<V> d; CompletableFuture<T> a;
+            //如果 dep 为 null, 则表示已经执行过, 则直接返回 null
+            //如果 dep 不为 null, 则尝试执行 dep 的函数, 执行不成功, 则返回 null
             if ((d = dep) == null ||
                 !d.uniApply(a = src, fn, mode > 0 ? null : this))
                 return null;
+            //运行到这里, 表示当前的函数已经执行成功, 也就是 d 已经有结果了
             dep = null; src = null; fn = null;
             return d.postFire(a, mode);
         }
     }
 
     /**
+     * 尝试执行当前函数
      * @param a 依赖的 CompletableFuture
      * @param f 执行的函数
      * @param c
      * @param <S>
-     * @return
+     * @return false 代表当前执行函数执行失败
      */
     final <S> boolean uniApply(CompletableFuture<S> a,
                                Function<? super S,? extends T> f,
@@ -755,11 +768,11 @@ public class CompletableFuture<T> implements Future<T>, CompletionStage<T> {
         //构造 f 函数的异步结果
         CompletableFuture<V> d =  new CompletableFuture<V>();
         //如果 e 执行器不为 null, 直接执行if体入栈
-        //如果 e 执行器为 null, 则先用 d.uniApply 尝试执行, 如果不成功则再执行 if 体入栈
+        //如果 e 执行器为 null, 则先用 d.uniApply 尝试执行函数, 如果不成功则再执行 if 体入栈
         if (e != null || !d.uniApply(this, f, null)) {
             //创建 UniApply
             UniApply<T,V> c = new UniApply<T,V>(e, d, this, f);
-            //添加
+            //入栈
             push(c);
             //调用
             c.tryFire(SYNC);
